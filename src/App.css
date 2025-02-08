@@ -92,3 +92,42 @@ p {
   font-size: 1rem;
   color: #bbbbbb;
 }
+
+.trade-input {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.trade-input input[type="text"] {
+  flex: 1;
+  padding: 10px;
+  border-radius: 5px 0 0 5px;
+  border: 1px solid #333;
+  background: #2e2e2e;
+  color: #fff;
+  border-right: none; /* Remove the border on the right side */
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.trade-input button {
+  padding: 10px 20px;
+  background: #007bff;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.trade-input button:hover {
+  background: #0056b3;
+}
+
+.trade-input button:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
