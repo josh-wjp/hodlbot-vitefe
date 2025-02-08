@@ -1,30 +1,33 @@
-import { useEffect, useState } from "react";
-import { initNear, login, logout, isSignedIn, getAccountId } from "./near-wallet";
-import "./App.css"; // Ensure styles are loaded
+import React, { useEffect, useState } from "react";
+import { initNear, login, logout, getAccountId } from "./near-wallet";
+import "./App.css";
 
 const App = () => {
   const [walletConnected, setWalletConnected] = useState(false);
-  const [accountId, setAccountId] = useState(null);
+  const [accountId, setAccountId] = useState("");
   const [tradeHistory, setTradeHistory] = useState([]);
   const [tradeAction, setTradeAction] = useState("BUY");
   const [tradeAmount, setTradeAmount] = useState("");
 
   // Initialize NEAR wallet on component mount
-useEffect(() => {
-  (async () => {
-    try {
-      const wallet = await initNear();
-      if (wallet.isSignedIn()) {
-        setWalletConnected(true);
-        setAccountId(wallet.getAccountId());
-        await fetchTradeHistory(); // Load trade history on login
-      }
-    } catch (error) {
-      console.error("Initialization error:", error);
-    }
-  })();
-}, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const isSignedIn = await initNear();
+        setWalletConnected(isSignedIn);
 
+        if (isSignedIn) {
+          const account = getAccountId();
+          setAccountId(account);
+
+          // Fetch trade history after wallet connection
+          await fetchTradeHistory();
+        }
+      } catch (error) {
+        console.error("Error initializing NEAR wallet:", error);
+      }
+    })();
+  }, []);
 
   // Fetch user's trade history (replace with real API/smart contract call)
   const fetchTradeHistory = async () => {
@@ -39,30 +42,31 @@ useEffect(() => {
     }
   };
 
-const submitTrade = async () => {
-  const tradeAmountNumber = parseFloat(tradeAmount); // Convert tradeAmount to a number
+  // Handle trade submission
+  const submitTrade = async () => {
+    const tradeAmountNumber = parseFloat(tradeAmount); // Convert tradeAmount to a number
 
-  if (!tradeAmount || isNaN(tradeAmountNumber)) {
-    alert("Please enter a valid trade amount.");
-    return;
-  }
+    if (!tradeAmount || isNaN(tradeAmountNumber)) {
+      alert("Please enter a valid trade amount.");
+      return;
+    }
 
-  try {
-    // Replace with smart contract call (storeTradeDecision)
-    console.log(`Submitting ${tradeAction} trade for ${tradeAmountNumber} NEAR`);
-    setTradeHistory([
-      ...tradeHistory,
-      {
-        action: tradeAction,
-        amount: `${tradeAmountNumber} NEAR`,
-        date: new Date().toISOString().split("T")[0],
-      },
-    ]);
-    setTradeAmount(""); // Clear input after submission
-  } catch (error) {
-    console.error("Trade submission failed:", error);
-  }
-};
+    try {
+      // Replace with smart contract call (storeTradeDecision)
+      console.log(`Submitting ${tradeAction} trade for ${tradeAmountNumber} NEAR`);
+      setTradeHistory([
+        ...tradeHistory,
+        {
+          action: tradeAction,
+          amount: `${tradeAmountNumber} NEAR`,
+          date: new Date().toISOString().split("T")[0],
+        },
+      ]);
+      setTradeAmount(""); // Clear input after submission
+    } catch (error) {
+      console.error("Trade submission failed:", error);
+    }
+  };
 
   return (
     <div className="app">
@@ -70,7 +74,7 @@ const submitTrade = async () => {
 
       {!walletConnected ? (
         <button onClick={login} className="login-button">
-          Connect NEAR Wallet
+          Connect Wallet
         </button>
       ) : (
         <div>
