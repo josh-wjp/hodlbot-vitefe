@@ -11,11 +11,12 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      crypto: "crypto-browserify", // Alias crypto to the browser-compatible polyfill
       buffer: "buffer", // Alias buffer to the browser-compatible polyfill
     },
   },
   optimizeDeps: {
-    include: ["buffer"], // Pre-bundle buffer
+    include: ["crypto-browserify", "buffer"], // Pre-bundle crypto-browserify
   },
   server: {
     proxy: {
@@ -27,8 +28,11 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "dist", // Azure expects this folder for the build
+    rollupOptions: {
+      input: "./src/main.jsx",
+    },
+    outDir: "dist",
     emptyOutDir: true,
-    sourcemap: false, // Disable source maps for production
+    sourcemap: false,
   },
 });
