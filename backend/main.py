@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware #//leave CORS code for dev testing, Azure manages in Prod
 from backend.ai.strategy import make_trade_decision  # Import your existing code
+import requests
 
 app = FastAPI()
 
