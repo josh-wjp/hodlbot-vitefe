@@ -16,18 +16,20 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: 16.20.2 # Stable version for crypto compatibility
         cache: "npm"
+
+    - name: Debug environment
+      run: |
+        node -v
+        npm -v
+        uname -a
+        ls -la
 
     - name: Install dependencies
       run: npm install
 
-    - name: Install crypto-browserify for build
-      run: npm install crypto-browserify
-
     - name: Build Vite app
-      env:
-        NODE_OPTIONS: "--openssl-legacy-provider"
       run: npm run build
 
     - name: Deploy to Azure Static Web Apps
