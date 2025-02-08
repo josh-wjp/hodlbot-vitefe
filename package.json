@@ -8,8 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "postinstall": "vite build"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@near-wallet-selector/core": "^8.9.16",
