@@ -35,14 +35,14 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m venv antenv
-          source antenv/bin/activate
+          python -m venv .venv
+          source .venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
           echo "✅ Dependencies installed"
       - name: Verify Dependencies Installation
         run: |
-          source antenv/bin/activate
+          source .venv/bin/activate
           pip list || exit 1
 
       - name: Oryx Opt Out
@@ -52,7 +52,7 @@ jobs:
       - name: ZIP the Application
         run: |
           # Zip the entire repository (excluding git files, the local venv, caches, etc.)
-          zip -r backend.zip . -x "*.git*" "*antenv/*" "__pycache__/*" "*.DS_Store"
+          zip -r backend.zip . -x "*.git*" "*.venv/*" "__pycache__/*" "*.DS_Store"
       - name: Verify ZIP File Creation
         run: ls -lh backend.zip || exit 1
 
