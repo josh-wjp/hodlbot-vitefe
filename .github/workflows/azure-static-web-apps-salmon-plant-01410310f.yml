@@ -16,7 +16,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: 16.20.2 # Stable version for crypto compatibility
+        node-version: 20.16.2 # Stable version for crypto compatibility
         cache: "npm"
 
     - name: Debug environment
