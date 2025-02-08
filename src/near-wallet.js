@@ -15,15 +15,13 @@ export const initNear = async () => {
       network: "testnet", // Use "mainnet" for production
       modules: [
         setupMyNearWallet({
-          walletUrl: "https://testnet.mynearwallet.com",
-          redirectUrl: window.location.origin, // Redirect back to the current site
+          walletUrl: "https://testnet.mynearwallet.com", // Ensure this is correct for testnet
         }),
       ],
     });
-    console.log("Wallet Selector State:", walletSelector.store.getState()); // Debug log
 
     if (walletSelector.isSignedIn()) {
-      wallet = await walletSelector.wallet();
+      wallet = await walletSelector.wallet(); // Ensure this is being set correctly
       console.log("Wallet is signed in:", wallet.getAccounts());
       return true;
     }
@@ -72,6 +70,8 @@ export const getAccountId = () => {
     throw new Error("Wallet is not initialized");
   }
   const accounts = wallet.getAccounts();
-  console.log("Wallet Accounts:", accounts); // Debug log
-  return accounts.length > 0 ? accounts[0].accountId : null;
+  if (accounts && accounts.length > 0) {
+    return accounts[0].accountId; // Retrieve the correct account ID
+  }
+  return "Crypto Trader"; // Fallback if no accounts are found
 };
