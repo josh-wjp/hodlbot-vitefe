@@ -36,7 +36,7 @@ const App = () => {
     setTradeDecision(null);
 
     try {
-      const response = await fetch(`https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net/${crypto}`);
+      const response = await fetch(`hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net/${crypto}`);
       if (!response.ok) {
         throw new Error("Failed to fetch trade decision.");
       }

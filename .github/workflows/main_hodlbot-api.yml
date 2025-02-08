@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - '**/*'  # Trigger on changes anywhere (or adjust as needed)
+      - '**/*'  # Trigger on changes anywhere
   workflow_dispatch:  # Allows manual triggering from GitHub Actions UI
 
 jobs:
@@ -14,25 +14,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout Code
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      # Step 2: Verify Checkout
       - name: Verify Checkout
         run: ls -la || exit 1
 
+      # Step 3: Log in to Azure
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 4: Verify Azure Login
       - name: Verify Azure Login
         run: az account show || exit 1
 
+      # Step 5: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
+      # Step 6: Verify Python Setup
       - name: Verify Python Setup
         run: python --version || exit 1
 
+      # Step 7: Install Dependencies
       - name: Install Dependencies
         run: |
           python -m venv .venv
@@ -40,30 +50,37 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           echo "✅ Dependencies installed"
+
+      # Step 8: Verify Dependencies Installation
       - name: Verify Dependencies Installation
         run: |
           source .venv/bin/activate
           pip list || exit 1
 
-      - name: Oryx Opt Out
+      # Step 9: Set SCM_DO_BUILD_DURING_DEPLOYMENT
+      - name: Disable Oryx Build
         run: |
-          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .env
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" > .env
 
+      # Step 10: Create a ZIP Package
       - name: ZIP the Application
         run: |
-          # Zip the entire repository (excluding git files, the local venv, caches, etc.)
           zip -r backend.zip . -x "*.git*" "*.venv/*" "__pycache__/*" "*.DS_Store"
+
+      # Step 11: Verify ZIP File Creation
       - name: Verify ZIP File Creation
         run: ls -lh backend.zip || exit 1
 
+      # Step 12: Deploy to Azure App Service
       - name: Deploy FastAPI Backend to Azure App Service
         uses: azure/webapps-deploy@v2
         with:
           app-name: "hodlbot-api"
-          slot-name: "production"
           package: "backend.zip"
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+      # Step 13: Verify Deployment with a Test Request
       - name: Verify Deployment
         run: |
-          sleep 10  # Allow some time for deployment
-          curl -f hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net || exit 1
+          sleep 10  # Wait for deployment to complete
+          curl -f https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net || exit 1
