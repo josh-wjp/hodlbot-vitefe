@@ -10,25 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout the repository
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Set up Node.js environment
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: 16
+        cache: "npm"
 
-    # Install dependencies
     - name: Install dependencies
       run: npm install
 
-    # Build the Vite app
+    - name: Install crypto-browserify for build
+      run: npm install crypto-browserify
+
     - name: Build Vite app
+      env:
+        NODE_OPTIONS: "--openssl-legacy-provider"
       run: npm run build
 
-    # Deploy to Azure Static Web Apps
     - name: Deploy to Azure Static Web Apps
       uses: Azure/static-web-apps-deploy@v1
       with:
