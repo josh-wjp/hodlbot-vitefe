@@ -1,4 +1,4 @@
-name: Build and Deploy React App
+name: Build and Deploy Vite App
 
 on:
   push:
@@ -10,27 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout your repository
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Set up Node.js
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: 16
 
-    # Install dependencies and build
-    - name: Install and build
-      run: |
-        cd frontend
-        npm install
-        npm run build
+    - name: Install dependencies
+      run: npm install
 
-    # Deploy build artifacts (e.g., to Azure)
+    - name: Build Vite app
+      run: npm run build
+
     - name: Deploy to Azure
       uses: azure/webapps-deploy@v2
       with:
         app-name: hodlbot-vitefe
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ./frontend/build
+        package: ./dist
