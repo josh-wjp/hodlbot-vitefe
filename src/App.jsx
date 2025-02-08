@@ -10,21 +10,21 @@ const App = () => {
   const [tradeAmount, setTradeAmount] = useState("");
 
   // Initialize NEAR wallet on component mount
-  useEffect(() => {
-    (async () => {
-      try {
-        await initNear();
-        if (isSignedIn()) {
-          setWalletConnected(true);
-          setAccountId(getAccountId());
+useEffect(() => {
+  (async () => {
+    try {
+      const wallet = await initNear();
+      if (wallet.isSignedIn()) {
+        setWalletConnected(true);
+        setAccountId(wallet.getAccountId());
         await fetchTradeHistory(); // Load trade history on login
       }
+    } catch (error) {
+      console.error("Initialization error:", error);
+    }
+  })();
+}, []);
 
-      } catch (error) {
-        console.error("Error initializing wallet:", error);
-      }
-    })();
-  }, []);
 
   // Fetch user's trade history (replace with real API/smart contract call)
   const fetchTradeHistory = async () => {

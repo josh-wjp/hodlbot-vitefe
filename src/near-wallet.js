@@ -6,44 +6,31 @@ const nearConfig = {
   nodeUrl: "https://rpc.testnet.near.org",
   walletUrl: "https://wallet.testnet.near.org",
   helperUrl: "https://helper.testnet.near.org",
+  appKeyPrefix: "hodlbot_", // Add a clear appKeyPrefix here
 };
 
-let wallet; // To store the wallet instance
+let wallet;
 
 export const initNear = async () => {
   console.log("Initializing NEAR wallet...");
-  const near = await connect(nearConfig); // Connect to NEAR
-  wallet = new WalletConnection(near); // Initialize wallet connection
-  return wallet;
+  try {
+    const near = await connect(nearConfig);
+    wallet = new WalletConnection(near, nearConfig.appKeyPrefix);
+    return wallet;
+  } catch (error) {
+    console.error("Error initializing wallet:", error);
+    throw error;
+  }
 };
 
 export const login = () => {
-  console.log("Logging in...");
-  if (!wallet) {
-    throw new Error("Wallet is not initialized. Call initNear first.");
-  }
-  wallet.requestSignIn(); // Redirects user to the NEAR Wallet for login
+  wallet.requestSignIn(); // Use the wallet instance to log in
 };
 
 export const logout = () => {
-  console.log("Logging out...");
-  if (!wallet) {
-    throw new Error("Wallet is not initialized. Call initNear first.");
-  }
-  wallet.signOut(); // Logs out the user
-  window.location.reload(); // Reloads the page to reflect the logged-out state
+  wallet.signOut(); // Use the wallet instance to log out
 };
 
-export const isSignedIn = () => {
-  if (!wallet) {
-    throw new Error("Wallet is not initialized. Call initNear first.");
-  }
-  return wallet.isSignedIn(); // Checks if the user is signed in
-};
+export const isSignedIn = () => wallet?.isSignedIn() || false;
 
-export const getAccountId = () => {
-  if (!wallet) {
-    throw new Error("Wallet is not initialized. Call initNear first.");
-  }
-  return wallet.getAccountId(); // Gets the user's NEAR account ID
-};
+export const getAccountId = () => wallet?.getAccountId() || null;
