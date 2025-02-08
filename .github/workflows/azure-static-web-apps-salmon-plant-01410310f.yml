@@ -27,7 +27,3 @@ jobs:
         app_location: "/"
         output_location: "dist"
 
-    - name: Ignore deployment errors (if app works)
-        if: failure()
-        run: echo "Deployment has succeeded with workflow errors."
-
