@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { nodePolyfills } from 'vite-plugin-node-polyfills'; // CORRECT IMPORT
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
   plugins: [
@@ -11,22 +11,24 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      buffer: 'buffer', // Alias buffer to the browser-compatible polyfill
+      buffer: "buffer", // Alias buffer to the browser-compatible polyfill
     },
   },
   optimizeDeps: {
-    include: ['buffer'], // Pre-bundle buffer
+    include: ["buffer"], // Pre-bundle buffer
   },
   server: {
-  proxy: {
-    '/api': {
-      target: 'https://app.mynearwallet.com',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api/, ''),
+    proxy: {
+      "/api": {
+        target: "https://app.mynearwallet.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
     },
   },
-    build: {
-  sourcemap: false,
+  build: {
+    outDir: "dist", // Azure expects this folder for the build
+    emptyOutDir: true,
+    sourcemap: false, // Disable source maps for production
   },
-},
 });

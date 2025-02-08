@@ -61,7 +61,7 @@ const App = () => {
           </button>
         ) : (
           <>
-            <p>Welcome, {accountId || "Unknown Account"}!</p>
+            <p>Welcome, {accountId}!</p>
             <div className="trade-input">
               <input
                 type="text"
