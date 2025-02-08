@@ -2,16 +2,12 @@ import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 import { setupModal } from "@near-wallet-selector/modal-ui";
 
-const nearConfig = {
-  networkId: "testnet", // Change to "mainnet" for production
-  nodeUrl: "https://rpc.testnet.near.org",
-  walletUrl: "https://wallet.testnet.near.org",
-  helperUrl: "https://helper.testnet.near.org",
-};
+const CONTRACT_ID = "stillviperwjp.testnet"; // Your deployed contract ID
 
 let walletSelector;
 let wallet;
 
+// Initialize the NEAR Wallet Selector
 export const initNear = async () => {
   try {
     console.log("Initializing NEAR Wallet Selector...");
@@ -19,22 +15,26 @@ export const initNear = async () => {
       network: "testnet", // Use "mainnet" for production
       modules: [
         setupMyNearWallet({
-          walletUrl: "https://app.mynearwallet.com",
+          walletUrl: "https://testnet.mynearwallet.com",
+          redirectUrl: window.location.origin, // Redirect back to the current site
         }),
       ],
     });
+    console.log("Wallet Selector State:", walletSelector.store.getState()); // Debug log
 
-    const isSignedIn = walletSelector.isSignedIn();
-    if (isSignedIn) {
+    if (walletSelector.isSignedIn()) {
       wallet = await walletSelector.wallet();
+      console.log("Wallet is signed in:", wallet.getAccounts());
+      return true;
     }
-    return isSignedIn;
+    return false;
   } catch (error) {
     console.error("Error initializing Wallet Selector:", error);
     throw error;
   }
 };
 
+// Show the wallet connection modal
 export const login = async () => {
   if (!walletSelector) {
     throw new Error("Wallet Selector is not initialized");
@@ -42,7 +42,7 @@ export const login = async () => {
 
   try {
     const modal = setupModal(walletSelector, {
-      contractId: "stillviperwjp.testnet", // contract ID
+      contractId: CONTRACT_ID,
     });
     modal.show();
   } catch (error) {
@@ -51,24 +51,27 @@ export const login = async () => {
   }
 };
 
+// Log out of the wallet
 export const logout = async () => {
-  if (!walletSelector) {
-    throw new Error("Wallet Selector is not initialized");
+  if (!wallet) {
+    throw new Error("Wallet is not initialized");
   }
 
   try {
-    const wallet = await walletSelector.wallet();
     await wallet.signOut();
-    window.location.reload();
+    window.location.reload(); // Reload the app after logout
   } catch (error) {
     console.error("Logout failed:", error);
     throw error;
   }
 };
 
+// Get the account ID of the connected wallet
 export const getAccountId = () => {
   if (!wallet) {
     throw new Error("Wallet is not initialized");
   }
-  return wallet.getAccounts()[0].accountId;
+  const accounts = wallet.getAccounts();
+  console.log("Wallet Accounts:", accounts); // Debug log
+  return accounts.length > 0 ? accounts[0].accountId : null;
 };

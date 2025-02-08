@@ -17,4 +17,16 @@ export default defineConfig({
   optimizeDeps: {
     include: ['buffer'], // Pre-bundle buffer
   },
+  server: {
+  proxy: {
+    '/api': {
+      target: 'https://app.mynearwallet.com',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api/, ''),
+    },
+  },
+    build: {
+  sourcemap: false,
+  },
+},
 });
