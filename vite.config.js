@@ -29,7 +29,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: "./src/main.jsx",
+      input: "./index.html", // Use index.html as the entry point
     },
     outDir: "dist",
     emptyOutDir: true,
