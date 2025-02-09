@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware #//leave CORS code for dev testing, Azure manages in Prod
-from backend.ai.strategy import make_trade_decision  # Import your existing code
+from fastapi.middleware.cors import CORSMiddleware
+from backend.ai.strategy import make_trade_decision
+from backend.routers import trade, transactions, portfolio
 import requests
 
 app = FastAPI()
 
-#//leave CORS code for dev testing, Azure manages in Prod
-#//Configure CORS
+#CORS Config
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://hodlbot.wjp.ai", "http://localhost:3000"],
@@ -16,6 +16,10 @@ app.add_middleware(
 )
 
 COINGECKO_API = "https://api.coingecko.com/api/v3/simple/price"
+
+app.include_router(trade.router)
+app.include_router(transactions.router)
+app.include_router(portfolio.router)
 
 @app.get("/")
 def home():

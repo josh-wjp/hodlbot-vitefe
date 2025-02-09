@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from models.trade import TradeRequest
-from models.transactions import Transaction, TransactionHistory
-from models.portfolio import Portfolio
-from utils.coingecko.py import get_price_from_api
+from backend.models.trade import TradeRequest
+from backend.models.transactions import Transaction, TransactionHistory
+from backend.models.portfolio import Portfolio
+from backend.utils.coingecko import get_price_from_api
 
 router = APIRouter()
 

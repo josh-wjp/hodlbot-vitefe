@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from models.portfolio import Portfolio
-from utils.coingecko import get_price_from_api
+from backend.models.portfolio import Portfolio
+from backend.utils.coingecko import get_price_from_api
 
 router = APIRouter()
 

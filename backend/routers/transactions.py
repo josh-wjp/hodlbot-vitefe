@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models.transactions import TransactionHistory
+from backend.models.transactions import TransactionHistory
 
 router = APIRouter()
 
