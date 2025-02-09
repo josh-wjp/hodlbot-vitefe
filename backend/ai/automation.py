@@ -1,42 +1,51 @@
+import logging
 import asyncio
-from backend.ai.strategy import make_trade_decision
+from backend.ai.strategy import make_trade_decision, calculate_stop_loss_and_take_profit
 
-# Global variable to control the trading loop
-trading_active = {}
+# Configure logging
+logging.basicConfig(
+    filename="trading.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
-async def start_automated_trading(crypto: str):
-    """Start the automated trading for a specific cryptocurrency."""
-    global trading_active
-    trading_active[crypto] = True
-    print(f"🚀 Automated trading started for {crypto}.")
+# Define a global trading_states dictionary to track trading status per cryptocurrency
+trading_states = {}
 
-    while trading_active.get(crypto, False):
+async def start_automated_trading(crypto):
+    """Start automated trading for a specific cryptocurrency."""
+    if trading_states.get(crypto):
+        logging.warning(f"Automated trading for {crypto} is already running.")
+        return
+
+    trading_states[crypto] = True
+    logging.info(f"Automated trading started for {crypto}.")
+
+    while trading_states[crypto]:
         try:
             # Fetch trade decision
             decision = make_trade_decision(crypto)
             if "error" in decision:
-                print(f"⚠️ Error for {crypto}: {decision['error']}")
+                logging.error(f"Error for {crypto}: {decision['error']}")
             else:
-                print(f"📈 Trade Decision for {crypto}: {decision}")
-
-                # Simulate buy/sell actions based on the decision
+                logging.info(f"Trade Decision for {crypto}: {decision}")
                 if decision["decision"] == "BUY":
-                    print(f"✅ Buying {crypto} at ${decision['price']}")
+                    logging.info(f"✅ Buying {crypto} at ${decision['price']} - {decision.get('reason', '')}")
                 elif decision["decision"] == "SELL":
-                    print(f"✅ Selling {crypto} at ${decision['price']}")
+                    logging.info(f"✅ Selling {crypto} at ${decision['price']} - {decision.get('reason', '')}")
                 else:
-                    print(f"🤝 Holding {crypto}")
+                    logging.info(f"🤝 Holding {crypto}")
         except Exception as e:
-            print(f"⚠️ Trading error for {crypto}: {e}")
+            logging.error(f"Trading error for {crypto}: {e}")
 
-        # Sleep for a trading interval
-        await asyncio.sleep(60)  # 60 seconds interval
+        # Wait for 60 seconds before the next decision
+        await asyncio.sleep(60)
 
-    print(f"⛔ Trading loop stopped for {crypto}.")
+def stop_automated_trading(crypto):
+    """Stop automated trading for a specific cryptocurrency."""
+    if not trading_states.get(crypto):
+        logging.warning(f"Automated trading for {crypto} is not running.")
+        return
 
-def stop_automated_trading(crypto: str):
-    """Stop the automated trading for a specific cryptocurrency."""
-    global trading_active
-    if trading_active.get(crypto):
-        trading_active[crypto] = False
-        print(f"⛔ Automated trading stopped for {crypto}.")
+    trading_states[crypto] = False
+    logging.info(f"Automated trading stopped for {crypto}.")
