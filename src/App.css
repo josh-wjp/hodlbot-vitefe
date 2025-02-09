@@ -173,3 +173,35 @@ footer {
   font-size: 0.8rem;
   color: #666;
 }
+
+.transaction-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: white;
+  background-color: #0077cc;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.transaction-button:hover {
+  background-color: #005fa3;
+  transform: scale(1.05);
+}
+
+.transaction-history {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #1e1e1e;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  text-align: left;
+}
+
+.transaction-history p {
+  font-size: 0.9rem;
+  margin: 5px 0;
+}

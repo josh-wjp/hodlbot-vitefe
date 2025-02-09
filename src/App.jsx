@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { initNear, login, logout, getAccountId } from "./near-wallet";
-import Footer from "./Footer"; // Import Footer component
+import Footer from "./Footer";
 import "./App.css";
 
 const App = () => {
@@ -10,85 +10,75 @@ const App = () => {
   const [tradeDecision, setTradeDecision] = useState(null); // API response for trade decision
   const [loading, setLoading] = useState(false); // Loading state for API requests
   const [balance, setBalance] = useState(null); // NEAR Wallet Balance
+  const [transactionHistory, setTransactionHistory] = useState([]); // Transaction history state
   const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
 
-useEffect(() => {
-  (async () => {
-    try {
-      const isSignedIn = await initNear();
-      setWalletConnected(isSignedIn);
+  // Initialize NEAR Wallet
+  useEffect(() => {
+    (async () => {
+      try {
+        const isSignedIn = await initNear();
+        setWalletConnected(isSignedIn);
 
-      if (isSignedIn) {
-        const account = await getAccountId(); // Await account retrieval
-        console.log("Fetched account ID from NEAR Wallet:", account);
+        if (isSignedIn) {
+          const account = await getAccountId();
+          console.log("Fetched account ID from NEAR Wallet:", account);
 
-        if (!account) {
-          console.error("Invalid or missing account ID. Please sign in with a valid NEAR account.");
-          setAccountId(""); // Clear invalid account ID
-        } else {
-          setAccountId(account);
-          fetchWalletBalance(account); // Fetch balance only for valid accounts
+          if (!account) {
+            console.error("Invalid or missing account ID. Please sign in with a valid NEAR account.");
+            setAccountId("");
+          } else {
+            setAccountId(account);
+            fetchWalletBalance(account);
+          }
         }
+      } catch (error) {
+        console.error("Error initializing NEAR wallet:", error);
+      }
+    })();
+  }, []);
+
+  // Fetch Wallet Balance
+  const fetchWalletBalance = async (accountId) => {
+    if (!accountId || !/^[a-z0-9._-]+$/.test(accountId)) {
+      console.error("Invalid account ID. Cannot fetch wallet balance:", accountId);
+      setBalance(null);
+      return;
+    }
+
+    try {
+      const response = await fetch("https://rpc.testnet.near.org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "dontcare",
+          method: "query",
+          params: {
+            request_type: "view_account",
+            finality: "final",
+            account_id: accountId,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch wallet balance. Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.result && data.result.amount) {
+        const yoctoNEAR = data.result.amount;
+        setBalance(Number(yoctoNEAR) / Math.pow(10, 24));
+      } else {
+        console.error("No balance data in response:", data);
+        setBalance(null);
       }
     } catch (error) {
-      console.error("Error initializing NEAR wallet:", error);
-    }
-  })();
-}, []);
-
-
-// Fetch wallet balance
-const fetchWalletBalance = async (accountId) => {
-  if (!accountId || !/^[a-z0-9._-]+$/.test(accountId)) {
-    console.error("Invalid account ID. Cannot fetch wallet balance:", accountId);
-    setBalance(null);
-    return;
-  }
-
-  console.log("Fetching wallet balance for account ID:", accountId);
-
-  try {
-    const response = await fetch("https://rpc.testnet.near.org", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "dontcare",
-        method: "query",
-        params: {
-          request_type: "view_account",
-          finality: "final",
-          account_id: accountId,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch wallet balance. Response status: " + response.status);
-    }
-
-    const data = await response.json();
-    console.log("Wallet balance data received:", data);
-
-    if (data.result && data.result.amount) {
-      const yoctoNEAR = data.result.amount; // Balance in yoctoNEAR
-      setBalance(Number(yoctoNEAR) / Math.pow(10, 24)); // Convert to NEAR
-    } else {
-      console.error("No balance data in response:", data);
+      console.error("Error fetching wallet balance:", error);
       setBalance(null);
     }
-  } catch (error) {
-    console.error("Error fetching wallet balance:", error);
-    setBalance(null); // Handle balance fetch failure
-  }
-};
-
-// Call fetchWalletBalance after wallet connection
-useEffect(() => {
-  if (walletConnected && accountId && /^[a-z0-9._-]+$/.test(accountId)) {
-    fetchWalletBalance(accountId);
-  }
-}, [walletConnected, accountId]);
+  };
 
   // Fetch Trade Decision
   const handleGetTradeDecision = async () => {
@@ -115,17 +105,18 @@ useEffect(() => {
     }
   };
 
-  // Fetch Transaction History (Currently mocked)
-  const fetchTransactionHistory = async (accountId) => {
+  // Fetch Transaction History
+  const fetchTransactionHistory = async () => {
     try {
+      // Note: Replace `<transaction-hash>` with a real hash if available
       const response = await fetch("https://rpc.testnet.near.org", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: "dontcare",
-          method: "tx",
-          params: [accountId],
+          method: "tx_status",
+          params: ["<transaction-hash>", accountId], // Replace dynamically
         }),
       });
 
@@ -135,7 +126,8 @@ useEffect(() => {
 
       const data = await response.json();
       console.log("Transaction history:", data);
-      // Process and display data here if needed
+      // Assuming `data` contains an array of transactions
+      setTransactionHistory(data.transactions || []);
     } catch (error) {
       console.error("Error fetching transaction history:", error);
     }
@@ -173,6 +165,7 @@ useEffect(() => {
                 {loading ? "Loading..." : "Get Trade Decision"}
               </button>
             </div>
+
             {tradeDecision && (
               <div className="trade-result">
                 {tradeDecision.error ? (
@@ -186,6 +179,23 @@ useEffect(() => {
                 )}
               </div>
             )}
+
+            {/* Transaction History Section */}
+            <button onClick={fetchTransactionHistory} className="transaction-button">
+              View Transactions
+            </button>
+            <div className="transaction-history">
+              {transactionHistory.length > 0 ? (
+                transactionHistory.map((txn, idx) => (
+                  <p key={idx}>
+                    <strong>Transaction:</strong> {txn.hash} <br />
+                    <strong>Status:</strong> {txn.status}
+                  </p>
+                ))
+              ) : (
+                <p>No transaction history available.</p>
+              )}
+            </div>
 
             <button onClick={logout} className="logout-button">
               Logout
