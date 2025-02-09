@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
+  base: "/", // Ensure this is the root or subpath where the app is deployed
   plugins: [
     react(),
     nodePolyfills({
