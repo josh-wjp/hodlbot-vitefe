@@ -1,12 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from backend.ai.strategy import make_trade_decision
 from backend.routers import trade, transactions, portfolio
+from backend.ai.automation import start_automated_trading, stop_automated_trading
 import requests
+
+# Global variable to track running trades
+running_trades = {}
 
 app = FastAPI()
 
-#CORS Config
+# CORS Config
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://hodlbot.wjp.ai", "http://localhost:3000"],
@@ -44,6 +48,24 @@ def trade_decision(coin_id: str):
 @app.get("/health")
 def health_check():
     return {"status": "Server is healthy!"}
+
+@app.post("/automation/start/{crypto}")
+def start_automation(crypto: str, background_tasks: BackgroundTasks):
+    if running_trades.get(crypto):
+        raise HTTPException(status_code=400, detail=f"Automated trading for {crypto} is already running.")
+
+    background_tasks.add_task(start_automated_trading, crypto)
+    running_trades[crypto] = True
+    return {"message": f"Automated trading started for {crypto}."}
+
+@app.post("/automation/stop/{crypto}")
+def stop_automation(crypto: str):
+    if not running_trades.get(crypto):
+        raise HTTPException(status_code=400, detail=f"No automated trading is running for {crypto}.")
+
+    stop_automated_trading(crypto)
+    running_trades.pop(crypto, None)
+    return {"message": f"Automated trading stopped for {crypto}."}
 
 if __name__ == "__main__":
     import os
