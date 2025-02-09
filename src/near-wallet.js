@@ -21,10 +21,14 @@ export const initNear = async () => {
     });
 
     if (walletSelector.isSignedIn()) {
-      wallet = await walletSelector.wallet(); // Ensure this is being set correctly
-      console.log("Wallet is signed in:", wallet.getAccounts());
+      wallet = await walletSelector.wallet();
+      console.log("Wallet initialized successfully:", wallet);
+      const accounts = await wallet.getAccounts();
+      console.log("Accounts fetched from wallet:", accounts);
       return true;
     }
+
+    console.log("Wallet not signed in.");
     return false;
   } catch (error) {
     console.error("Error initializing Wallet Selector:", error);
@@ -65,13 +69,32 @@ export const logout = async () => {
 };
 
 // Get the account ID of the connected wallet
-export const getAccountId = () => {
+export const getAccountId = async () => {
   if (!wallet) {
-    throw new Error("Wallet is not initialized");
+    console.error("Wallet is not initialized");
+    return "";
   }
-  const accounts = wallet.getAccounts();
-  if (accounts && accounts.length > 0) {
-    return accounts[0].accountId; // Retrieve the correct account ID
+
+  try {
+    const accounts = await wallet.getAccounts(); // Ensure this is awaited
+    console.log("Accounts from wallet:", accounts);
+
+    if (accounts && accounts.length > 0) {
+      const accountId = accounts[0].accountId;
+
+      // Validate account ID
+      if (/^[a-z0-9._-]+\.testnet$/.test(accountId)) {
+        return accountId;
+      } else {
+        console.error("Invalid NEAR account ID received:", accountId);
+        return "";
+      }
+    }
+
+    console.error("No accounts found in the wallet.");
+    return "";
+  } catch (error) {
+    console.error("Error fetching accounts from wallet:", error);
+    return "";
   }
-  return "Crypto Trader"; // Fallback if no accounts are found
 };

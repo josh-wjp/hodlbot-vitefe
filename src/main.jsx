@@ -6,8 +6,13 @@ import "@near-wallet-selector/modal-ui/styles.css";
 import { Buffer } from "buffer";
 import crypto from "crypto-browserify";
 
+// Set the global Buffer (safe to do)
 window.Buffer = Buffer;
-window.crypto = crypto;
+
+// Use a fallback for crypto if needed, without overwriting the built-in crypto
+if (!window.crypto.subtle) {
+    window.customCrypto = crypto; // Use customCrypto as an alternative
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>

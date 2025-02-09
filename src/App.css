@@ -1,3 +1,4 @@
+/* General Styles */
 body {
   margin: 0;
   padding: 0;
@@ -17,13 +18,19 @@ body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
   padding: 20px;
   width: 90%;
-  max-width: 400px;
+  max-width: 500px;
 }
 
 h1 {
-  font-size: 1.8rem;
+  font-size: 2rem;
   color: #ffffff;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 1rem;
+  color: #bbbbbb;
+  margin-bottom: 10px;
 }
 
 button {
@@ -51,48 +58,23 @@ button:active {
 }
 
 .logout-button {
-  margin-bottom: 20px;
-}
-
-.trade-section,
-.trade-history {
   margin-top: 20px;
+  background-color: #cc0000;
 }
 
-select,
-input {
-  margin: 10px 0;
-  padding: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 5px;
-  border: 1px solid #333333;
-  background-color: #262626;
-  color: #e0e0e0;
+.logout-button:hover {
+  background-color: #a30000;
 }
 
-select:focus,
-input:focus {
-  outline: none;
-  border-color: #0077cc;
+/* Wallet Balance Section */
+.wallet-balance {
+  margin: 15px 0;
+  font-size: 1.2rem;
+  color: #00ff00;
+  font-weight: bold;
 }
 
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  margin-bottom: 10px;
-  font-size: 0.9rem;
-  color: #bbbbbb;
-}
-
-p {
-  font-size: 1rem;
-  color: #bbbbbb;
-}
-
+/* Trade Decision Section */
 .trade-input {
   display: flex;
   justify-content: center;
@@ -107,7 +89,7 @@ p {
   border: 1px solid #333;
   background: #2e2e2e;
   color: #fff;
-  border-right: none; /* Remove the border on the right side */
+  border-right: none;
   font-size: 16px;
   box-sizing: border-box;
 }
@@ -130,4 +112,64 @@ p {
 .trade-input button:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+.trade-result {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #333;
+  background: #2e2e2e;
+  border-radius: 8px;
+}
+
+.trade-result h3 {
+  font-size: 1.4rem;
+  color: #00ff00;
+  margin-bottom: 10px;
+}
+
+.trade-result p {
+  font-size: 1rem;
+  color: #bbbbbb;
+}
+
+/* Transaction History Section */
+.transaction-history {
+  margin-top: 30px;
+}
+
+.transaction-history h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.transaction-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #2e2e2e;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.transaction-history li {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #1e1e1e;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  color: #bbbbbb;
+  border: 1px solid #333;
+}
+
+.transaction-history li:last-child {
+  margin-bottom: 0;
+}
+
+/* Footer Section */
+footer {
+  margin-top: 30px;
+  font-size: 0.8rem;
+  color: #666;
 }
