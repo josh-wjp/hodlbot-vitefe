@@ -90,6 +90,7 @@ button:active {
   justify-content: space-between;
   align-items: center;
   margin-top: 20px;
+  gap: 10px; /* Add space between elements */
 }
 
 .trade-input input {
@@ -103,18 +104,25 @@ button:active {
   font-size: 16px;
 }
 
-.trade-result {
-  margin-top: 20px;
-  padding: 15px;
-  border: 1px solid #333;
-  background: #2e2e2e;
-  border-radius: 8px;
+.trade-input button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: white;
+  background-color: #0077cc;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  flex: 1; /* Make buttons the same size */
 }
 
-.trade-result h3 {
-  font-size: 1.4rem;
-  color: #00ff00;
-  margin-bottom: 10px;
+.trade-input button:hover {
+  background-color: #005fa3;
+}
+
+.trade-input button:disabled {
+  background-color: #444;
+  cursor: not-allowed;
 }
 
 /* Balances & Transactions */
