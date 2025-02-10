@@ -166,3 +166,56 @@ button:active {
     grid-template-columns: 1fr;
   }
 }
+
+/* Crypto Index */
+.crypto-index {
+  margin-top: 20px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 20px;
+  color: #e0e0e0;
+  text-align: left;
+}
+
+.crypto-index h2 {
+  font-size: 1.5rem;
+  color: #ffffff;
+  margin-bottom: 15px;
+}
+
+.crypto-index ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.crypto-index li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.crypto-index li:hover {
+  background: #2e2e2e;
+}
+
+.crypto-index button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.crypto-index button:hover {
+  background-color: #005fa3;
+}

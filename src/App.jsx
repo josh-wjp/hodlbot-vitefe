@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { initNear, login, logout, getAccountId } from "./near-wallet";
-import Footer from "./Footer"; // Import Footer component
+import Footer from "./Footer";
+import CryptoIndex from "./components/CryptoIndex";
 import "./App.css";
 
 const App = () => {
@@ -15,7 +16,8 @@ const App = () => {
   const [cryptoPrices, setCryptoPrices] = useState({}); // Current prices for each cryptocurrency
   const [transactionHistory, setTransactionHistory] = useState([]); // Transaction history
   const [aggregateUsdValue, setAggregateUsdValue] = useState(0); // Total crypto value in USD
-  const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
+  //const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
+  const API_BASE_URL = "http://localhost:8000";
 
   useEffect(() => {
     (async () => {
@@ -42,7 +44,6 @@ const App = () => {
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
-  // Fetch Trade Decision
   const handleGetTradeDecision = async () => {
     if (!crypto) {
       alert("Please enter a cryptocurrency.");
@@ -74,10 +75,9 @@ const App = () => {
     }
   };
 
-  // Handle Mock Buy/Sell
   const handleTransaction = async (type) => {
     if (!crypto) {
-      alert("Please search for a cryptocurrency first.");
+      alert("Please select a cryptocurrency first.");
       return;
     }
 
@@ -88,7 +88,6 @@ const App = () => {
 
     const transactionAmount = Number(amount);
 
-    // Fetch the latest price of the cryptocurrency if not already present
     let price = cryptoPrices[crypto.toUpperCase()];
     if (!price) {
       try {
@@ -110,17 +109,14 @@ const App = () => {
       }
     }
 
-    // Ensure user has enough balance for BUY
     if (type === "buy" && transactionAmount > balance) {
       alert("Insufficient NEAR balance to complete the transaction.");
       return;
     }
 
-    // Update NEAR Wallet Balance
     const newBalance = type === "buy" ? balance - transactionAmount : balance + transactionAmount;
     setBalance(newBalance);
 
-    // Update cryptocurrency balances
     setCryptoBalances((prevBalances) => {
       const currentBalance = prevBalances[crypto.toUpperCase()] || 0;
       const newCryptoBalance =
@@ -128,21 +124,23 @@ const App = () => {
       return { ...prevBalances, [crypto.toUpperCase()]: newCryptoBalance };
     });
 
-    // Add transaction to history
     const newTransaction = {
       type,
       amount: transactionAmount,
       date: new Date().toLocaleString(),
       coin: crypto.toUpperCase(),
-      price, // Add price to transaction
+      price,
     };
 
     setTransactionHistory((prev) => [newTransaction, ...prev]);
 
-    // Reset fields
     setCrypto("");
     setAmount("");
-    setTradeDecision(null); // Reset the trade indicator
+    setTradeDecision(null);
+  };
+
+  const handleSelectCrypto = (selectedCrypto) => {
+    setCrypto(selectedCrypto);
   };
 
   return (
@@ -161,6 +159,9 @@ const App = () => {
           <>
             <p>Welcome, {accountId}!</p>
             <p>Wallet Balance: {balance.toFixed(4)} NEAR</p>
+
+            {/* Cryptocurrency Index */}
+            <CryptoIndex cryptoPrices={cryptoPrices} onSelectCrypto={handleSelectCrypto} />
 
             {/* Trade Decision Section */}
             <div className="trade-input">
