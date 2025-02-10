@@ -26,5 +26,4 @@ jobs:
         action: "upload"
         app_location: "/"
         output_location: "dist"
-        production_branch: "production"
 
