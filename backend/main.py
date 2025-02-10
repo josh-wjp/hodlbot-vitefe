@@ -18,6 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+COINGECKO_API = "https://api.coingecko.com/api/v3/simple/price"
+
 @router.get("/coins", tags=["Coins"])
 async def get_cached_coins():
     # Your caching logic...
@@ -26,7 +28,20 @@ async def get_cached_coins():
     response.headers["Access-Control-Allow-Origin"] = "*"
     return response
 
-COINGECKO_API = "https://api.coingecko.com/api/v3/simple/price"
+@router.get("/proxy/coins")
+async def proxy_coins():
+    """Fetch CoinGecko data through FastAPI to bypass CORS & rate limits."""
+    try:
+        response = requests.get(
+            COINGECKO_API,
+            params={"vs_currency": "usd", "order": "market_cap_desc", "per_page": 100},
+            timeout=10,
+            headers={"User-Agent": "HodlBot/1.0"}  # Helps prevent rate limits
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"CoinGecko API Error: {str(e)}")
 
 app.include_router(coins.router)
 app.include_router(trade.router)
