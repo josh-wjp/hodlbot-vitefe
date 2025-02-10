@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { initNear, login, logout, getAccountId } from "./near-wallet";
-import Footer from "./Footer";
 import CryptoIndex from "./components/CryptoIndex";
 import "./App.css";
 
@@ -9,16 +8,18 @@ const App = () => {
   const [accountId, setAccountId] = useState("");
   const [crypto, setCrypto] = useState(""); // Cryptocurrency input
   const [amount, setAmount] = useState(""); // Amount for buy/sell
-  const [tradeDecision, setTradeDecision] = useState(null); // API response for trade decision
   const [loading, setLoading] = useState(false); // Loading state for API requests
   const [balance, setBalance] = useState(100); // Mock NEAR Wallet Balance
   const [cryptoBalances, setCryptoBalances] = useState({}); // Balances for each cryptocurrency
   const [cryptoPrices, setCryptoPrices] = useState({}); // Current prices for each cryptocurrency
   const [transactionHistory, setTransactionHistory] = useState([]); // Transaction history
   const [aggregateUsdValue, setAggregateUsdValue] = useState(0); // Total crypto value in USD
-  //const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
-  const API_BASE_URL = "http://localhost:8000";
+  const [error, setError] = useState(null); // Error state for API polling
 
+  const API_BASE_URL = "http://localhost:4000";
+  const POLLING_INTERVAL = 60000; // 60 seconds
+
+  // Initialize NEAR Wallet
   useEffect(() => {
     (async () => {
       try {
@@ -35,45 +36,49 @@ const App = () => {
     })();
   }, []);
 
+  // Poll the /coins endpoint every 60 seconds
   useEffect(() => {
-    // Update USD value whenever cryptoBalances or cryptoPrices change
+    const fetchCryptoData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/coins`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Fetched crypto data:", data);
+
+        // Update cryptoPrices state
+        setCryptoPrices(
+          Object.fromEntries(data.map((coin) => [coin.id.toUpperCase(), coin.current_price]))
+        );
+      } catch (err) {
+        console.error("Error fetching crypto data:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Fetch initially and then poll every 60 seconds
+    fetchCryptoData();
+    const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update USD value whenever cryptoBalances or cryptoPrices change
+  useEffect(() => {
     const totalUsdValue = Object.entries(cryptoBalances).reduce((sum, [coin, balance]) => {
       const price = cryptoPrices[coin] || 0; // Use stored price or default to 0
       return sum + balance * price;
     }, 0);
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
-
-  const handleGetTradeDecision = async () => {
-    if (!crypto) {
-      alert("Please enter a cryptocurrency.");
-      return;
-    }
-
-    setLoading(true);
-    setTradeDecision(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/trade/${crypto}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch trade decision.");
-      }
-      const data = await response.json();
-
-      // Update the price of the searched crypto
-      setCryptoPrices((prevPrices) => ({
-        ...prevPrices,
-        [crypto.toUpperCase()]: data.price,
-      }));
-
-      setTradeDecision(data);
-    } catch (error) {
-      console.error("Error fetching trade decision:", error);
-      setTradeDecision({ error: "Unable to fetch trade decision. Try again later." });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleTransaction = async (type) => {
     if (!crypto) {
@@ -90,23 +95,8 @@ const App = () => {
 
     let price = cryptoPrices[crypto.toUpperCase()];
     if (!price) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/trade/${crypto}`);
-        if (response.ok) {
-          const data = await response.json();
-          price = data.price;
-          setCryptoPrices((prevPrices) => ({
-            ...prevPrices,
-            [crypto.toUpperCase()]: price,
-          }));
-        } else {
-          throw new Error("Failed to fetch current price.");
-        }
-      } catch (error) {
-        console.error(`Error fetching price for ${crypto.toUpperCase()}:`, error);
-        alert("Unable to complete transaction. Please try again later.");
-        return;
-      }
+      alert("Unable to fetch price. Try again later.");
+      return;
     }
 
     if (type === "buy" && transactionAmount > balance) {
@@ -136,7 +126,6 @@ const App = () => {
 
     setCrypto("");
     setAmount("");
-    setTradeDecision(null);
   };
 
   const handleSelectCrypto = (selectedCrypto) => {
@@ -146,7 +135,7 @@ const App = () => {
   return (
     <div className="container">
       {/* Left Column */}
-      <div>
+      <div className="left-column">
         <h1>HodlBot AI</h1>
         <p>An AI-powered crypto trading tool with NEAR integration</p>
         <p>-For Educational Purposes Only-</p>
@@ -161,34 +150,12 @@ const App = () => {
             <p>Wallet Balance: {balance.toFixed(4)} NEAR</p>
 
             {/* Cryptocurrency Index */}
-            <CryptoIndex cryptoPrices={cryptoPrices} onSelectCrypto={handleSelectCrypto} />
-
-            {/* Trade Decision Section */}
-            <div className="trade-input">
-              <input
-                type="text"
-                placeholder="Enter cryptocurrency (e.g., bitcoin)"
-                value={crypto}
-                onChange={(e) => setCrypto(e.target.value)}
-              />
-              <button onClick={handleGetTradeDecision} disabled={loading}>
-                {loading ? "Loading..." : "Get Trade Decision"}
-              </button>
-            </div>
-
-            {/* Trade Indicator */}
-            {tradeDecision && (
-              <div className="trade-result">
-                {tradeDecision.error ? (
-                  <p>{tradeDecision.error}</p>
-                ) : (
-                  <>
-                    <h3>Trade Decision: {tradeDecision.decision}</h3>
-                    <p>Price: ${tradeDecision.price}</p>
-                    <p>RSI: {tradeDecision.RSI}</p>
-                  </>
-                )}
-              </div>
+            {error ? (
+              <p>Error fetching cryptocurrency data: {error}</p>
+            ) : loading ? (
+              <p>Loading cryptocurrency data...</p>
+            ) : (
+              <CryptoIndex cryptoPrices={cryptoPrices} onSelectCrypto={handleSelectCrypto} />
             )}
 
             {/* Buy/Sell Section */}
@@ -215,8 +182,7 @@ const App = () => {
       </div>
 
       {/* Right Column */}
-      <div>
-        <h2>Balances & Transactions</h2>
+      <div className="right-column">
         <div className="crypto-balances">
           <h3>Crypto Balances</h3>
           <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>
