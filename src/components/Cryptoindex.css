@@ -1,0 +1,31 @@
+.crypto-index ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.crypto-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.trade-decision {
+  font-weight: bold;
+}
+
+.buy-highlight {
+  background-color: rgba(0, 255, 0, 0.3); /* Light Green */
+}
+
+.sell-highlight {
+  background-color: rgba(255, 0, 0, 0.3); /* Light Red */
+}
+
+.hold-highlight {
+  background-color: rgba(255, 255, 0, 0.3); /* Light Yellow */
+}

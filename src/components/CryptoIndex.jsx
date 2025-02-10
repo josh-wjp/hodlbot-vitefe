@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
+import "./CryptoIndex.css"; // Ensure styles are applied
 
-const CryptoIndex = ({ onSelectCrypto }) => {
+const CryptoIndex = ({ onSelectCrypto, tradeDecisions }) => {
   const [visibleCount, setVisibleCount] = useState(10); // Number of coins to display initially
   const [cryptoList, setCryptoList] = useState([]);
   const [loading, setLoading] = useState(true); // Loading state for API
   const [error, setError] = useState(null); // Error state for API
 
   useEffect(() => {
-    // Fetch the list of cryptocurrencies and their prices
     const fetchCryptoList = async () => {
       try {
         const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100");
@@ -38,12 +38,26 @@ const CryptoIndex = ({ onSelectCrypto }) => {
       {error && <p>Error: {error}</p>}
       {!loading && !error && (
         <ul>
-          {cryptoList.slice(0, visibleCount).map((crypto) => (
-            <li key={crypto.id} onClick={() => onSelectCrypto(crypto.id)}>
-              <span>{crypto.name}</span>
-              <span>${crypto.current_price.toFixed(2)}</span>
-            </li>
-          ))}
+          {cryptoList.slice(0, visibleCount).map((crypto) => {
+            const tradeDecision = tradeDecisions[crypto.id.toUpperCase()] || "HOLD"; // Default to HOLD
+
+            let highlightClass = "";
+            if (tradeDecision === "BUY") highlightClass = "buy-highlight";
+            else if (tradeDecision === "SELL") highlightClass = "sell-highlight";
+            else if (tradeDecision === "HOLD") highlightClass = "hold-highlight";
+
+            return (
+              <li
+                key={crypto.id}
+                className={`crypto-item ${highlightClass}`}
+                onClick={() => onSelectCrypto(crypto.id)}
+              >
+                <span>{crypto.name}</span>
+                <span>${crypto.current_price.toFixed(2)}</span>
+                <span className="trade-decision">{tradeDecision}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
       {!loading && !error && visibleCount < cryptoList.length && (

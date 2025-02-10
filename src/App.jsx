@@ -15,6 +15,7 @@ const App = () => {
   const [transactionHistory, setTransactionHistory] = useState([]); // Transaction history
   const [aggregateUsdValue, setAggregateUsdValue] = useState(0); // Total crypto value in USD
   const [error, setError] = useState(null); // Error state for API polling
+  const [tradeDecisions, setTradeDecisions] = useState({});
 
   const API_BASE_URL = "http://localhost:4000";
   const POLLING_INTERVAL = 60000; // 60 seconds
@@ -53,7 +54,7 @@ const App = () => {
 
         // Update cryptoPrices state
         setCryptoPrices(
-          Object.fromEntries(data.map((coin) => [coin.id.toUpperCase(), coin.current_price]))
+            Object.fromEntries(data.map((coin) => [coin.id.toUpperCase(), coin.current_price]))
         );
       } catch (err) {
         console.error("Error fetching crypto data:", err);
@@ -110,8 +111,8 @@ const App = () => {
     setCryptoBalances((prevBalances) => {
       const currentBalance = prevBalances[crypto.toUpperCase()] || 0;
       const newCryptoBalance =
-        type === "buy" ? currentBalance + transactionAmount : Math.max(0, currentBalance - transactionAmount);
-      return { ...prevBalances, [crypto.toUpperCase()]: newCryptoBalance };
+          type === "buy" ? currentBalance + transactionAmount : Math.max(0, currentBalance - transactionAmount);
+      return {...prevBalances, [crypto.toUpperCase()]: newCryptoBalance};
     });
 
     const newTransaction = {
@@ -133,91 +134,95 @@ const App = () => {
   };
 
   return (
-    <div className="container">
-      {/* Left Column */}
-      <div className="left-column">
-        <h1>HodlBot AI</h1>
-        <p>An AI-powered crypto trading tool with NEAR integration</p>
-        <p>-For Educational Purposes Only-</p>
+      <div className="container">
+        {/* Left Column */}
+        <div className="left-column">
+          <h1>HodlBot AI</h1>
+          <p>An AI-powered crypto trading tool with NEAR integration</p>
+          <p>-For Educational Purposes Only-</p>
 
-        {!walletConnected ? (
-          <button onClick={login} className="login-button">
-            Connect NEAR Wallet
-          </button>
-        ) : (
-          <>
-            <p>Welcome, {accountId}!</p>
-            <p>Wallet Balance: {balance.toFixed(4)} NEAR</p>
-
-            {/* Cryptocurrency Index */}
-            {error ? (
-              <p>Error fetching cryptocurrency data: {error}</p>
-            ) : loading ? (
-              <p>Loading cryptocurrency data...</p>
-            ) : (
-              <CryptoIndex cryptoPrices={cryptoPrices} onSelectCrypto={handleSelectCrypto} />
-            )}
-
-            {/* Buy/Sell Section */}
-            <div className="trade-input">
-              <input
-                type="number"
-                placeholder={`Amount of ${crypto || "crypto"} (e.g., 5)`}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <button onClick={() => handleTransaction("buy")} disabled={loading}>
-                Buy
+          {!walletConnected ? (
+              <button onClick={login} className="login-button">
+                Connect NEAR Wallet
               </button>
-              <button onClick={() => handleTransaction("sell")} disabled={loading}>
-                Sell
-              </button>
-            </div>
-
-            <button onClick={logout} className="logout-button">
-              Logout
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Right Column */}
-      <div className="right-column">
-        <div className="crypto-balances">
-          <h3>Crypto Balances</h3>
-          <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>
-          {Object.keys(cryptoBalances).length > 0 ? (
-            <ul>
-              {Object.entries(cryptoBalances).map(([coin, bal], idx) => (
-                <li key={idx}>
-                  <strong>{coin}:</strong> {bal.toFixed(4)}
-                </li>
-              ))}
-            </ul>
           ) : (
-            <p>No crypto balances available.</p>
-          )}
-        </div>
+              <>
+                <p>Welcome, {accountId}!</p>
+                <p>Wallet Balance: {balance.toFixed(4)} NEAR</p>
 
-        <div className="transaction-history">
-          <h3>Transaction History</h3>
-          {transactionHistory.length > 0 ? (
-            <div className="transaction-list">
-              {transactionHistory.map((txn, idx) => (
-                <div key={idx}>
-                  <p>
-                    <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ ${txn.price.toFixed(2)}
-                  </p>
-                  <p>Date: {txn.date}</p>
+                {/* Cryptocurrency Index */}
+                {error ? (
+                    <p>Error fetching cryptocurrency data: {error}</p>
+                ) : loading ? (
+                    <p>Loading cryptocurrency data...</p>
+                ) : (
+                    <CryptoIndex
+                        cryptoPrices={cryptoPrices}
+                        tradeDecisions={tradeDecisions}
+                        onSelectCrypto={handleSelectCrypto}
+                    />
+                )}
+
+                {/* Buy/Sell Section */}
+                <div className="trade-input">
+                  <input
+                      type="number"
+                      placeholder={`Amount of ${crypto || "crypto"} (e.g., 5)`}
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                  />
+                  <button onClick={() => handleTransaction("buy")} disabled={loading}>
+                    Buy
+                  </button>
+                  <button onClick={() => handleTransaction("sell")} disabled={loading}>
+                    Sell
+                  </button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p>No transaction history available.</p>
+
+                <button onClick={logout} className="logout-button">
+                  Logout
+                </button>
+              </>
           )}
         </div>
+
+        {/* Right Column */}
+        <div className="right-column">
+          <div className="crypto-balances">
+            <h3>Crypto Balances</h3>
+            <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>
+            {Object.keys(cryptoBalances).length > 0 ? (
+                <ul>
+                  {Object.entries(cryptoBalances).map(([coin, bal], idx) => (
+                      <li key={idx}>
+                        <strong>{coin}:</strong> {bal.toFixed(4)}
+                      </li>
+                  ))}
+                </ul>
+            ) : (
+                <p>No crypto balances available.</p>
+            )}
+          </div>
+
+          <div className="transaction-history">
+            <h3>Transaction History</h3>
+            {transactionHistory.length > 0 ? (
+                <div className="transaction-list">
+                  {transactionHistory.map((txn, idx) => (
+                      <div key={idx}>
+                        <p>
+                          <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ ${txn.price.toFixed(2)}
+                        </p>
+                        <p>Date: {txn.date}</p>
+                      </div>
+                  ))}
+                </div>
+            ) : (
+                <p>No transaction history available.</p>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
   );
 };
 
