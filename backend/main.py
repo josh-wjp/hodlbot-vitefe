@@ -12,7 +12,11 @@ router = APIRouter()
 # CORS Config
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ "http://localhost", "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net", "https://salmon-plant-01410310f.4.azurestaticapps.net", "https://hodlbot.wjp.ai" ],
+    allow_origins=[ "http://localhost:5173",
+                    "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net",
+                    "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net/coins",
+                    "https://salmon-plant-01410310f.4.azurestaticapps.net",
+                    "https://hodlbot.wjp.ai" ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
