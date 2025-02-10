@@ -27,7 +27,7 @@ function TradeInfo() {
 
 async function fetchPrice(coinId) {
   try {
-    const response = await fetch(`http://localhost:8000/price/${coinId}`);
+    const response = await fetch(`https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net${coinId}`);
     if (!response.ok) throw new Error("Failed to fetch price");
     const data = await response.json();
     return data[coinId].usd;

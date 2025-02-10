@@ -17,7 +17,7 @@ const App = () => {
   const [error, setError] = useState(null); // Error state for API polling
   const [tradeDecisions, setTradeDecisions] = useState({});
 
-  const API_BASE_URL = "http://localhost:4000";
+  const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
   const POLLING_INTERVAL = 60000; // 60 seconds
 
   // Initialize NEAR Wallet
