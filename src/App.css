@@ -187,6 +187,8 @@ button:active {
   padding: 20px;
   color: #e0e0e0;
   text-align: left;
+  max-height: 320px; /* Adjust height as needed */
+  overflow-y: hidden; /* Ensure scrolling works */
 }
 
 .crypto-index h2 {
@@ -199,7 +201,7 @@ button:active {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
