@@ -1,13 +1,12 @@
-import React from "react";
+// FrontEndDesign.jsx
+import React, { useState } from "react";
 import CryptoIndex from "./components/CryptoIndex";
 
-// This component receives all its data & handlers via props from App.jsx
 const FrontEndDesign = ({
   walletConnected,
   login,
   accountId,
   balance,
-  error,
   loading,
   cryptoPrices,
   tradeDecisions,
@@ -20,10 +19,14 @@ const FrontEndDesign = ({
   transactionHistory,
   aggregateUsdValue,
   cryptoBalances,
+  autoTrading,
+  toggleAutoTrading,
 }) => {
+  const [isDebouncing, setIsDebouncing] = useState(false);
+  const isAutoOn = crypto && autoTrading[crypto.toLowerCase()] === true;
+
   return (
     <div className="container">
-      {/* Left Column */}
       <div className="left-column">
         <h1>HodlBot AI</h1>
         <p>An AI-powered crypto trading tool with NEAR integration</p>
@@ -39,10 +42,7 @@ const FrontEndDesign = ({
             <p>Welcome, {accountId}!</p>
             <p>Wallet Balance: {balance.toFixed(4)} NEAR</p>
 
-            {/* Cryptocurrency Index */}
-            {error ? (
-              <p>Error fetching cryptocurrency data: {error}</p>
-            ) : loading ? (
+            {loading ? (
               <p>Loading cryptocurrency data...</p>
             ) : (
               <CryptoIndex
@@ -52,7 +52,6 @@ const FrontEndDesign = ({
               />
             )}
 
-            {/* Buy/Sell Section */}
             <div className="trade-input">
               <input
                 type="number"
@@ -66,6 +65,24 @@ const FrontEndDesign = ({
               <button onClick={() => handleTransaction("sell")} disabled={loading}>
                 Sell
               </button>
+
+              {/* Auto Button with Debounce */}
+              <button
+                className={`auto-button ${isAutoOn ? "on" : "off"}`}
+                onClick={() => {
+                  if (!crypto) {
+                    alert("Please select a cryptocurrency first.");
+                    return;
+                  }
+                  if (isDebouncing) return;
+                  setIsDebouncing(true);
+                  toggleAutoTrading(crypto.toLowerCase());
+                  setTimeout(() => setIsDebouncing(false), 500);
+                }}
+                disabled={loading || isDebouncing}
+              >
+                {isAutoOn ? "Stop Auto" : "Start Auto"}
+              </button>
             </div>
 
             <button onClick={logout} className="logout-button">
@@ -75,10 +92,8 @@ const FrontEndDesign = ({
         )}
       </div>
 
-      {/* Right Column */}
       <div className="right-column">
         <h2>Balances and Transactions</h2>
-
         <div className="crypto-balances">
           <h3>Crypto Balances</h3>
           <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>

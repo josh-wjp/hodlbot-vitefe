@@ -445,6 +445,39 @@ html, body {
   min-height: calc(100vh - 60px);
 }
 
+/* Auto Button Classes */
+.auto-button {
+  color: #fff;
+  padding: 10px 20px;
+  margin-left: 0.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Deactivated (OFF) State */
+.auto-button.off {
+  background-color: red;
+}
+
+.auto-button.off:hover {
+  background-color: #c40000;
+  transform: scale(1.05);
+}
+
+/* Activated (ON) State */
+.auto-button.on {
+  background-color: green;
+}
+
+.auto-button.on:hover {
+  background-color: #0f8b0f;
+  transform: scale(1.05);
+}
+
+/* Footer */
 footer {
   position: fixed;
   bottom: 0;

@@ -7,7 +7,7 @@ app = FastAPI()
 router = APIRouter()
 
 COINGECKO_API_MARKETS = "https://api.coingecko.com/api/v3/coins/markets"
-cache = {"data": None, "timestamp": 0, "ttl": 60}  # Cache with TTL of 60 seconds
+cache = {"data": None, "timestamp": 0, "ttl": 300}  # Cache with TTL of 300 seconds
 
 @router.get("/coins", tags=["Coins"])
 def get_cached_coins():
