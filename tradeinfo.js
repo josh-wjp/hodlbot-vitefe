@@ -39,7 +39,7 @@ async function fetchPrice(coinId) {
 
 async function fetchTradeDecision(coinId) {
   try {
-    const response = await fetch(`http://localhost:8000/trade/${coinId}`);
+    const response = await fetch(`https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net/trade/${coinId}`);
     if (!response.ok) throw new Error("Failed to fetch trade decision");
     return await response.json();
   } catch (error) {

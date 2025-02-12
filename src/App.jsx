@@ -6,7 +6,7 @@ import Footer from "./Footer";
 import ErrorDialog from "./ErrorDialog";
 import "./App.css";
 
-const PYTHON_API_URL = "http://localhost:8000/api";
+const PYTHON_API_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net/api";
 const POLLING_INTERVAL = 300000; // 5 minutes
 const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
 
@@ -26,7 +26,7 @@ const App = () => {
   const [tradeDecisions, setTradeDecisions] = useState({});
   const [autoTrading, setAutoTrading] = useState({});
 
-  const API_BASE_URL = "http://localhost:8000";
+  const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
 
   // Initialize NEAR Wallet
   useEffect(() => {
