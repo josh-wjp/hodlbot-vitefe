@@ -61,8 +61,6 @@ COINGECKO_API = "https://api.coingecko.com/api/v3/simple/price"
 
 @router.get("/coins", tags=["Coins"])
 async def get_cached_coins():
-    # Example logic to return cached data
-    # (Assumes you have some global 'cache' dict.)
     if "data" not in cache:
         return JSONResponse(content={"error": "No cached data"}, status_code=404)
     response = JSONResponse(content=cache["data"])

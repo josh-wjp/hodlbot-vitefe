@@ -7,7 +7,7 @@ import ErrorDialog from "./ErrorDialog";
 import "./App.css";
 
 const PYTHON_API_URL = "http://localhost:8000/api";
-const POLLING_INTERVAL = 120000; // 2 minutes
+const POLLING_INTERVAL = 300000; // 5 minutes
 const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
 
 const App = () => {
