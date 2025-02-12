@@ -45,41 +45,34 @@ const App = () => {
   }, []);
 
   // Fetch Crypto Data only if logged in
-useEffect(() => {
-  // Only fetch coin data if the user is logged in.
-  if (!walletConnected) {
-    return;
-  }
+  useEffect(() => {
+    if (!walletConnected) return;
 
-  const fetchCryptoData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE_URL}/coins`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    const fetchCryptoData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE_URL}/coins`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const data = await response.json();
+        const pricesMap = {};
+        data.forEach((coin) => {
+          pricesMap[coin.id.toLowerCase()] = coin.current_price;
+        });
+        setCryptoPrices(pricesMap);
+      } catch (err) {
+        console.error("Error fetching crypto data:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json();
-      console.log("Fetched crypto data:", data);
-      const pricesMap = {};
-      data.forEach((coin) => {
-        // Standardize keys to lowercase
-        pricesMap[coin.id.toLowerCase()] = coin.current_price;
-      });
-      setCryptoPrices(pricesMap);
-    } catch (err) {
-      console.error("Error fetching crypto data:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  // Fetch immediately, then set an interval for periodic fetching.
-  fetchCryptoData();
-  const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
-  return () => clearInterval(interval);
-}, [walletConnected]);
+    fetchCryptoData();
+    const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
+    return () => clearInterval(interval);
+  }, [walletConnected]);
 
   // Calculate Aggregate USD Value
   useEffect(() => {
@@ -90,7 +83,7 @@ useEffect(() => {
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
-  // Toggle Auto-Trading (standardize coin to lowercase)
+  // Toggle Auto-Trading
   const toggleAutoTrading = async (coin) => {
     const standardizedCoin = coin.toLowerCase();
     const isOn = !!autoTrading[standardizedCoin];
@@ -106,18 +99,8 @@ useEffect(() => {
         body: JSON.stringify({ coin: standardizedCoin }),
       });
 
-      if (!response.ok) {
-        let msg = "Unknown error";
-        try {
-          const data = await response.json();
-          msg = data.error || msg;
-        } catch (parseErr) {}
-        setError(msg);
-        return;
-      }
+      if (!response.ok) throw new Error("Error toggling auto-trading");
 
-      console.log(`Auto-trading ${isOn ? "stopped" : "started"} for ${standardizedCoin}`);
-      setError(null);
       setAutoTrading((prev) => ({ ...prev, [standardizedCoin]: !isOn }));
     } catch (err) {
       console.error("Error toggling auto-trading:", err);
@@ -129,35 +112,19 @@ useEffect(() => {
   useEffect(() => {
     const pollAiDecisions = async () => {
       const activeCoins = Object.keys(autoTrading).filter((c) => autoTrading[c]);
-      if (activeCoins.length === 0) return;
+      if (!activeCoins.length) return;
 
       for (const coin of activeCoins) {
         try {
           const resp = await fetch(`${PYTHON_API_URL}/trading/decision/${coin}`);
-          if (!resp.ok) {
-            let msg = `Unknown error fetching AI decision for ${coin}`;
-            try {
-              const data = await resp.json();
-              msg = data.error || msg;
-            } catch (e) {}
-            console.error(msg);
-            setError(msg);
-            continue;
-          }
-          setError(null);
-          const decision = await resp.json();
-          console.log(`AI decision for ${coin}:`, decision);
+          if (!resp.ok) throw new Error(`Error fetching AI decision for ${coin}`);
 
-          if (decision.error) {
-            // Store only the error string
-            setTradeDecisions((prev) => ({ ...prev, [coin]: decision.error }));
-          } else {
-            setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
-            if (decision.decision === "BUY") {
-              autoTransaction(coin, "buy", 1, decision.price);
-            } else if (decision.decision === "SELL") {
-              autoTransaction(coin, "sell", 1, decision.price);
-            }
+          const decision = await resp.json();
+          setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
+          if (decision.decision === "BUY") {
+            autoTransaction(coin, "buy", 1, decision.price);
+          } else if (decision.decision === "SELL") {
+            autoTransaction(coin, "sell", 1, decision.price);
           }
         } catch (err) {
           console.error("AI decision error:", err);
@@ -166,18 +133,15 @@ useEffect(() => {
       }
     };
 
-    pollAiDecisions();
-    const aiInterval = setInterval(pollAiDecisions, AI_DECISION_POLL_INTERVAL);
-    return () => clearInterval(aiInterval);
+    const interval = setInterval(pollAiDecisions, AI_DECISION_POLL_INTERVAL);
+    return () => clearInterval(interval);
   }, [autoTrading]);
 
   // Auto Transaction Helper
   const autoTransaction = (coin, type, amountToTrade, price) => {
     setCrypto(coin);
     setAmount(String(amountToTrade));
-    setTimeout(() => {
-      handleTransaction(type);
-    }, 100);
+    setTimeout(() => handleTransaction(type), 100);
   };
 
   // Manual Buy/Sell
@@ -194,43 +158,58 @@ useEffect(() => {
     const transactionAmount = Number(amount);
     const coinKey = crypto.toLowerCase();
     const price = cryptoPrices[coinKey];
+    const currentBalance = cryptoBalances[coinKey] || 0;
+
     if (!price) {
       alert("Unable to fetch price. Try again later.");
       return;
     }
-    if (type === "buy" && transactionAmount > balance) {
+
+    if (type === "buy" && transactionAmount * price > balance) {
       alert("Insufficient NEAR balance to complete the transaction.");
       return;
     }
 
-    const newBalance = type === "buy" ? balance - transactionAmount : balance + transactionAmount;
+    if (type === "sell" && transactionAmount > currentBalance) {
+      alert("Insufficient crypto balance to complete the transaction.");
+      return;
+    }
+
+    const newBalance =
+      type === "buy"
+        ? balance - transactionAmount * price
+        : balance + transactionAmount * price;
+
     setBalance(newBalance);
 
     setCryptoBalances((prev) => {
       const prevBal = prev[coinKey] || 0;
-      const updatedBal = type === "buy" ? prevBal + transactionAmount : Math.max(0, prevBal - transactionAmount);
+      const updatedBal =
+        type === "buy"
+          ? prevBal + transactionAmount
+          : Math.max(0, prevBal - transactionAmount);
       return { ...prev, [coinKey]: updatedBal };
     });
 
-    const newTransaction = {
-      type,
-      amount: transactionAmount,
-      date: new Date().toLocaleString(),
-      coin: coinKey,
-      price,
-    };
-    setTransactionHistory((prev) => [newTransaction, ...prev]);
+    setTransactionHistory((prev) => [
+      {
+        type,
+        amount: transactionAmount,
+        date: new Date().toLocaleString(),
+        coin: coinKey,
+        price,
+      },
+      ...prev,
+    ]);
 
     setCrypto("");
     setAmount("");
   };
 
-  const handleSelectCrypto = (selectedCrypto) => {
-    setCrypto(selectedCrypto);
-  };
+  const handleSelectCrypto = (selectedCrypto) => setCrypto(selectedCrypto);
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <FrontEndDesign
         walletConnected={walletConnected}
         login={login}
@@ -251,12 +230,11 @@ useEffect(() => {
         cryptoBalances={cryptoBalances}
         autoTrading={autoTrading}
         toggleAutoTrading={toggleAutoTrading}
+        style={{ flex: 1 }}
       />
-
       <ErrorDialog error={error} onClose={() => setError(null)} />
-
       <Footer />
-    </>
+    </div>
   );
 };
 
