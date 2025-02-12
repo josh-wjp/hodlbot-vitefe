@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useEffect, useState } from "react";
 import { initNear, login, logout, getAccountId } from "./near-wallet";
 import FrontEndDesign from "./FrontEndDesign";
@@ -10,14 +11,13 @@ const POLLING_INTERVAL = 120000; // 2 minutes
 const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
 
 const App = () => {
-  // State declarations
+  // Core state declarations
   const [walletConnected, setWalletConnected] = useState(false);
   const [accountId, setAccountId] = useState("");
   const [crypto, setCrypto] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState(100);
-  // Ensure cryptoBalances is defined
   const [cryptoBalances, setCryptoBalances] = useState({});
   const [cryptoPrices, setCryptoPrices] = useState({});
   const [transactionHistory, setTransactionHistory] = useState([]);
@@ -28,9 +28,7 @@ const App = () => {
 
   const API_BASE_URL = "http://localhost:8000";
 
-  // -----------------------
   // Initialize NEAR Wallet
-  // -----------------------
   useEffect(() => {
     (async () => {
       try {
@@ -46,56 +44,53 @@ const App = () => {
     })();
   }, []);
 
-  // -----------------------
-  // Fetch Crypto Data
-  // -----------------------
-  useEffect(() => {
-    const fetchCryptoData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE_URL}/coins`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log("Fetched crypto data:", data);
+  // Fetch Crypto Data only if logged in
+useEffect(() => {
+  // Only fetch coin data if the user is logged in.
+  if (!walletConnected) {
+    return;
+  }
 
-        // Build a price map using lowercase coin IDs
-        const pricesMap = {};
-        data.forEach((coin) => {
-          pricesMap[coin.id.toLowerCase()] = coin.current_price;
-        });
-        setCryptoPrices(pricesMap);
-      } catch (err) {
-        console.error("Error fetching crypto data:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchCryptoData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/coins`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      const data = await response.json();
+      console.log("Fetched crypto data:", data);
+      const pricesMap = {};
+      data.forEach((coin) => {
+        // Standardize keys to lowercase
+        pricesMap[coin.id.toLowerCase()] = coin.current_price;
+      });
+      setCryptoPrices(pricesMap);
+    } catch (err) {
+      console.error("Error fetching crypto data:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
-    return () => clearInterval(interval);
-  }, []);
+  // Fetch immediately, then set an interval for periodic fetching.
+  fetchCryptoData();
+  const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
+  return () => clearInterval(interval);
+}, [walletConnected]);
 
-  // -----------------------
   // Calculate Aggregate USD Value
-  // -----------------------
   useEffect(() => {
-    // Example: Sum prices (adjust logic as needed if you have balances per coin)
     const totalUsdValue = Object.entries(cryptoBalances).reduce((sum, [coin, bal]) => {
-      // Use the lowercase key for lookup
       const price = cryptoPrices[coin.toLowerCase()] || 0;
       return sum + bal * price;
     }, 0);
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
-  // -----------------------
-  // Toggle Auto-Trading (standardize coin name to lowercase)
-  // -----------------------
+  // Toggle Auto-Trading (standardize coin to lowercase)
   const toggleAutoTrading = async (coin) => {
     const standardizedCoin = coin.toLowerCase();
     const isOn = !!autoTrading[standardizedCoin];
@@ -116,11 +111,9 @@ const App = () => {
         try {
           const data = await response.json();
           msg = data.error || msg;
-        } catch (parseErr) {
-          // If parsing fails, fallback to msg
-        }
+        } catch (parseErr) {}
         setError(msg);
-        return; // Do not update autoTrading state if the request fails
+        return;
       }
 
       console.log(`Auto-trading ${isOn ? "stopped" : "started"} for ${standardizedCoin}`);
@@ -132,9 +125,7 @@ const App = () => {
     }
   };
 
-  // -----------------------
   // Poll AI Decisions
-  // -----------------------
   useEffect(() => {
     const pollAiDecisions = async () => {
       const activeCoins = Object.keys(autoTrading).filter((c) => autoTrading[c]);
@@ -167,7 +158,6 @@ const App = () => {
             } else if (decision.decision === "SELL") {
               autoTransaction(coin, "sell", 1, decision.price);
             }
-            // HOLD: do nothing
           }
         } catch (err) {
           console.error("AI decision error:", err);
@@ -181,9 +171,7 @@ const App = () => {
     return () => clearInterval(aiInterval);
   }, [autoTrading]);
 
-  // -----------------------
   // Auto Transaction Helper
-  // -----------------------
   const autoTransaction = (coin, type, amountToTrade, price) => {
     setCrypto(coin);
     setAmount(String(amountToTrade));
@@ -192,9 +180,7 @@ const App = () => {
     }, 100);
   };
 
-  // -----------------------
   // Manual Buy/Sell
-  // -----------------------
   const handleTransaction = async (type) => {
     if (!crypto) {
       alert("Please select a cryptocurrency first.");
@@ -217,16 +203,12 @@ const App = () => {
       return;
     }
 
-    const newBalance = type === "buy"
-      ? balance - transactionAmount
-      : balance + transactionAmount;
+    const newBalance = type === "buy" ? balance - transactionAmount : balance + transactionAmount;
     setBalance(newBalance);
 
     setCryptoBalances((prev) => {
       const prevBal = prev[coinKey] || 0;
-      const updatedBal = type === "buy"
-        ? prevBal + transactionAmount
-        : Math.max(0, prevBal - transactionAmount);
+      const updatedBal = type === "buy" ? prevBal + transactionAmount : Math.max(0, prevBal - transactionAmount);
       return { ...prev, [coinKey]: updatedBal };
     });
 

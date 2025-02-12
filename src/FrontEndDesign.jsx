@@ -26,12 +26,12 @@ const FrontEndDesign = ({
   const isAutoOn = crypto && autoTrading[crypto.toLowerCase()] === true;
 
   return (
-    <div className="container">
+    <div className={`container ${!walletConnected ? "logged-out" : ""}`}>
       <div className="left-column">
-        <h1>HodlBot AI</h1>
-        <p>An AI-powered crypto trading tool with NEAR integration</p>
-        <p>-For Educational Purposes Only-</p>
-        <p>-Index updates every two minutes-</p>
+        <h2>HodlBot AI</h2>
+        <h4>An AI-powered crypto trading tool with NEAR integration</h4>
+        <p>-For Entertainment Purposes Only-</p>
+        <p>-Index updates every five minutes-</p>
 
         {!walletConnected ? (
           <button onClick={login} className="login-button">
@@ -92,43 +92,45 @@ const FrontEndDesign = ({
         )}
       </div>
 
-      <div className="right-column">
-        <h2>Balances and Transactions</h2>
-        <div className="crypto-balances">
-          <h3>Crypto Balances</h3>
-          <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>
-          {Object.keys(cryptoBalances).length > 0 ? (
-            <ul>
-              {Object.entries(cryptoBalances).map(([coin, bal], idx) => (
-                <li key={idx}>
-                  <strong>{coin}:</strong> {bal.toFixed(4)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No crypto balances available.</p>
-          )}
-        </div>
+      {walletConnected && (
+        <div className="right-column">
+          <h2>Balances and Transactions</h2>
+          <div className="crypto-balances">
+            <h3>Crypto Balances</h3>
+            <p>Aggregate USD Value: ${aggregateUsdValue.toFixed(2)}</p>
+            {Object.keys(cryptoBalances).length > 0 ? (
+              <ul>
+                {Object.entries(cryptoBalances).map(([coin, bal], idx) => (
+                  <li key={idx}>
+                    <strong>{coin}:</strong> {bal.toFixed(4)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No crypto balances available.</p>
+            )}
+          </div>
 
-        <div className="transaction-history">
-          <h3>Transaction History</h3>
-          {transactionHistory.length > 0 ? (
-            <div className="transaction-list">
-              {transactionHistory.map((txn, idx) => (
-                <div key={idx}>
-                  <p>
-                    <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ $
-                    {txn.price.toFixed(2)}
-                  </p>
-                  <p>Date: {txn.date}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p>No transaction history available.</p>
-          )}
+          <div className="transaction-history">
+            <h3>Transaction History</h3>
+            {transactionHistory.length > 0 ? (
+              <div className="transaction-list">
+                {transactionHistory.map((txn, idx) => (
+                  <div key={idx}>
+                    <p>
+                      <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ $
+                      {txn.price.toFixed(2)}
+                    </p>
+                    <p>Date: {txn.date}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No transaction history available.</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
