@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./CryptoIndex.css";
 
 // Define your API URL (ensure it matches your backend)
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
 
 const CryptoIndex = ({ onSelectCrypto, tradeDecisions }) => {
   const [visibleCount, setVisibleCount] = useState(10); // Number of coins to display initially

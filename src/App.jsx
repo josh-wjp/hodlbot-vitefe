@@ -6,7 +6,7 @@ import ErrorDialog from "./ErrorDialog";
 import "./App.css";
 
 // Use a single API base constant for all endpoints.
-const API_URL = "http://localhost:8000/api";
+const API_URL = "https://hodlbot-api-bmcmdhccf5hmgahy.eastus2-01.azurewebsites.net";
 
 // Define polling intervals (in milliseconds)
 const LIVE_POLLING_INTERVAL = 300000; // 5 minutes (live mode)
