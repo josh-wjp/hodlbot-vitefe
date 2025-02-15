@@ -361,6 +361,23 @@ footer {
   transform: scale(1.05);
 }
 
+.reset-strategy-button {
+  margin-top: 10px;
+  padding: 10px;
+  font-size: 1rem;
+  color: white;
+  background-color: #f39c12;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.reset-strategy-button:hover {
+  background-color: #e67e22;
+}
+
+
 @media (max-width: 768px) {
   .container {
     grid-template-columns: 1fr; /* Stack columns on smaller screens */

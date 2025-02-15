@@ -186,6 +186,46 @@ async def stop_auto_trading(data: dict = Body(...)):
     return {"status": "stopped", "coin": coin}
 
 #############################################
+# Apply Trading Strategy
+#############################################
+
+@router.post("/trading/applyStrategy", tags=["Trading"])
+async def apply_strategy(request: Request):
+    """
+    Apply an auto-trading strategy for a specific coin.
+    """
+    data = await request.json()
+    coin = data.get("coin")
+    strategy = data.get("strategy", {})
+
+    if not coin:
+        raise HTTPException(status_code=400, detail="Coin is required.")
+
+    # Extract strategy parameters with defaults
+    profit_threshold = strategy.get("profitThreshold", 5)  # Default 5%
+    max_loss = strategy.get("maxLoss", 10)  # Default 10%
+    trade_frequency = strategy.get("tradeFrequency", 15)  # Default 15 minutes
+    sma_window = strategy.get("smaWindow", 5)  # Default SMA-5
+    rsi_window = strategy.get("rsiWindow", 14)  # Default RSI-14
+    bollinger_window = strategy.get("bollingerWindow", 20)  # Default Bollinger Bands
+    adx_threshold = strategy.get("adxThreshold", 25)  # Default ADX-25
+
+    # Log strategy for debugging
+    print(f"Applying strategy for {coin}:")
+    print(f"  Profit Threshold: {profit_threshold}%")
+    print(f"  Max Loss: {max_loss}%")
+    print(f"  Trade Frequency: {trade_frequency} minutes")
+    print(f"  SMA Window: {sma_window}")
+    print(f"  RSI Window: {rsi_window}")
+    print(f"  Bollinger Bands Window: {bollinger_window}")
+    print(f"  ADX Threshold: {adx_threshold}")
+
+    # Example: Save the strategy to a database or memory (if needed)
+    # strategies[coin] = strategy
+
+    return {"status": "success", "strategy": strategy}
+
+#############################################
 # Include the Router with Prefix "/api"
 #############################################
 app.include_router(router, prefix="/api")

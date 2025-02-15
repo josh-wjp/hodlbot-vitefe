@@ -1,5 +1,5 @@
 const transactionManager = {
-  initialBalance: 100.0, // Mock initial balance
+  initialBalance: 5000.0, // Mock initial balance
   transactionHistory: [],
 
   getBalance: function () {

@@ -29,6 +29,7 @@ const App = () => {
   const [tradeDecisions, setTradeDecisions] = useState({});
   const [autoTrading, setAutoTrading] = useState({});
   const [isSimulationMode, setIsSimulationMode] = useState(false); // Simulation mode state
+  const [autoTradingStrategies, setAutoTradingStrategies] = useState({});
 
   // New state variables for tracking holdings and PnL.
   const [holdings, setHoldings] = useState({}); // e.g., { bitcoin: { quantity: X, avgCost: Y } }
@@ -281,6 +282,55 @@ const App = () => {
     }
   };
 
+  const applyStrategy = async (coin, strategy) => {
+  const standardizedCoin = coin.toLowerCase();
+  setError(null);
+
+  try {
+    const response = await fetch(`${API_URL}/trading/applyStrategy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coin: standardizedCoin, strategy }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Error applying strategy");
+    }
+
+    setAutoTradingStrategies((prev) => ({
+      ...prev,
+      [standardizedCoin]: strategy,
+    }));
+
+    alert(`Strategy successfully applied for ${coin}`);
+  } catch (err) {
+    console.error("Error applying strategy:", err);
+    setError(err.message);
+  }
+};
+
+  const resetStrategy = (coin) => {
+  const defaultStrategy = {
+    profitThreshold: 5, // Default 5%
+    maxLoss: 10, // Default 10%
+    tradeFrequency: 15, // Default 15 minutes
+    smaWindow: 5, // Default SMA-5
+    rsiWindow: 14, // Default RSI-14
+    bollingerWindow: 20, // Default Bollinger Bands
+    adxThreshold: 25, // Default ADX-25
+  };
+
+  const standardizedCoin = coin.toLowerCase();
+
+  // Update the strategy state
+  setAutoTradingStrategies((prev) => ({
+    ...prev,
+    [standardizedCoin]: defaultStrategy,
+  }));
+
+  alert(`Strategy for ${coin} has been reset to defaults.`);
+};
+
   // Poll AI Decisions for active auto trading coins.
   useEffect(() => {
     const pollAiDecisions = async () => {
@@ -348,6 +398,10 @@ const App = () => {
         toggleAutoTrading={toggleAutoTrading}
         isSimulationMode={isSimulationMode}
         toggleSimulationMode={toggleSimulationMode}
+        applyStrategy={applyStrategy}
+        resetStrategy={resetStrategy}
+        setAutoTradingStrategies={setAutoTradingStrategies}
+        autoTradingStrategies={autoTradingStrategies}
         style={{ flex: 1 }}
       />
       <ErrorDialog error={error} onClose={() => setError(null)} />
