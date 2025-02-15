@@ -5,13 +5,10 @@ import pandas as pd
 from fastapi import FastAPI, APIRouter, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-# Import your live strategy logic (adjust the path as needed)
-from backend.ai.strategy import make_trade_decision
+from backend.ai.strategy import make_trade_decision  # Live strategy logic
 
 app = FastAPI()
 
-# Re-enable CORSMiddleware with valid origins (do not include URL paths here)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -30,8 +27,9 @@ router = APIRouter()
 #############################################
 # Global Simulation Mode State
 #############################################
-# Use a dictionary as the single source of truth for mode.
 current_mode = {"mode": "live"}  # Default to live mode
+# Uncomment the following line to force simulation mode for debugging:
+# current_mode["mode"] = "simulation"
 
 # Define coin ranges for simulation
 COIN_RANGES = {
@@ -46,7 +44,6 @@ COIN_RANGES = {
 # Simulation Helper Functions
 #############################################
 def simulate_strategy(coin_id: str):
-    """Simulate a trade decision for a coin."""
     coin = coin_id.lower()
     if coin not in COIN_RANGES:
         return {"error": f"Invalid coin: '{coin_id}'"}
@@ -57,7 +54,6 @@ def simulate_strategy(coin_id: str):
     return {"decision": decision, "price": simulated_price, "coin": coin}
 
 def simulate_price(coin_id: str):
-    """Simulate a price for a coin."""
     coin = coin_id.lower()
     if coin not in COIN_RANGES:
         raise HTTPException(status_code=400, detail=f"Invalid coin: '{coin_id}'")
@@ -72,14 +68,14 @@ cache = {"data": None, "timestamp": 0, "ttl": 300}  # TTL = 300 seconds
 COINGECKO_API_MARKETS = "https://api.coingecko.com/api/v3/coins/markets"
 
 #############################################
-# /coins Endpoint (Simulation-Aware)
+# /coins Endpoint (Simulation-Aware with Fallback)
 #############################################
 @router.get("/coins", tags=["Coins"])
 def get_cached_coins():
-    """
-    In simulation mode, return simulated coin data.
-    Otherwise, fetch (or return cached) live data from CoinGecko and add trade indicators.
-    """
+    # Log the current mode for debugging.
+    print("Current mode:", current_mode["mode"])
+
+    # If in simulation mode, always return simulated data.
     if current_mode["mode"] == "simulation":
         simulated_data = []
         for coin, (low, high) in COIN_RANGES.items():
@@ -92,6 +88,7 @@ def get_cached_coins():
             })
         return simulated_data
 
+    # Otherwise (live mode), try to return live data using caching.
     current_time = time.time()
     if cache["data"] and (current_time - cache["timestamp"] < cache["ttl"]):
         return cache["data"]
@@ -105,6 +102,7 @@ def get_cached_coins():
         response.raise_for_status()
         coins = response.json()
 
+        # For each coin, add a trade indicator using the live strategy.
         for coin in coins:
             coin_id = coin["id"]
             try:
@@ -119,10 +117,12 @@ def get_cached_coins():
         return coins
 
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching data: {e}")
+        print("Error fetching live data:", e)
+        # In live mode, do not fallback to simulation; instead, raise an error.
+        raise HTTPException(status_code=500, detail=f"Error fetching live data: {e}")
 
 #############################################
-# /price Endpoint (Simulation-Aware)
+# Other Endpoints (unchanged)
 #############################################
 @router.get("/price/{coin_id}", tags=["Price"])
 def get_price(coin_id: str):
@@ -137,9 +137,6 @@ def get_price(coin_id: str):
         except requests.exceptions.RequestException as e:
             raise HTTPException(status_code=500, detail=f"Error fetching price: {e}")
 
-#############################################
-# /trade Endpoint (Simulation-Aware)
-#############################################
 @router.get("/trade/{coin_id}", tags=["Trade"])
 def trade_decision(coin_id: str):
     if current_mode["mode"] == "simulation":
@@ -150,9 +147,6 @@ def trade_decision(coin_id: str):
         raise HTTPException(status_code=400, detail=f"Invalid coin: '{coin_id}'")
     return result
 
-#############################################
-# /trading/decision Endpoint (Simulation-Aware)
-#############################################
 @router.get("/trading/decision/{coin}", tags=["Trading"])
 def api_get_decision(coin: str):
     if current_mode["mode"] == "simulation":
@@ -161,9 +155,6 @@ def api_get_decision(coin: str):
         decision = make_trade_decision(coin)
     return decision
 
-#############################################
-# /mode Endpoints
-#############################################
 @router.get("/mode", tags=["Mode"])
 def get_mode():
     return current_mode
@@ -179,6 +170,20 @@ async def set_mode_endpoint(request: Request):
         cache["timestamp"] = 0
         return current_mode
     raise HTTPException(status_code=400, detail="Invalid mode")
+
+@router.post("/trading/start", tags=["Trading"])
+async def start_auto_trading(data: dict = Body(...)):
+    coin = data.get("coin")
+    if not coin:
+        raise HTTPException(status_code=400, detail="No coin provided.")
+    return {"status": "started", "coin": coin}
+
+@router.post("/trading/stop", tags=["Trading"])
+async def stop_auto_trading(data: dict = Body(...)):
+    coin = data.get("coin")
+    if not coin:
+        raise HTTPException(status_code=400, detail="No coin provided.")
+    return {"status": "stopped", "coin": coin}
 
 #############################################
 # Include the Router with Prefix "/api"

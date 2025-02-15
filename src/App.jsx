@@ -5,15 +5,16 @@ import Footer from "./Footer";
 import ErrorDialog from "./ErrorDialog";
 import "./App.css";
 
-// Use a single API base constant for all endpoints
+// Use a single API base constant for all endpoints.
 const API_URL = "http://localhost:8000/api";
 
-const POLLING_INTERVAL = 300000; // 5 minutes for live data
+// Define polling intervals (in milliseconds)
+const LIVE_POLLING_INTERVAL = 300000; // 5 minutes
 const SIMULATION_POLLING_INTERVAL = 10000; // 10 seconds for simulation mode
 const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
 
 const App = () => {
-  // Core state declarations
+  // Core state declarations.
   const [walletConnected, setWalletConnected] = useState(false);
   const [accountId, setAccountId] = useState("");
   const [crypto, setCrypto] = useState("");
@@ -29,7 +30,7 @@ const App = () => {
   const [autoTrading, setAutoTrading] = useState({});
   const [isSimulationMode, setIsSimulationMode] = useState(false); // Simulation mode state
 
-  // Initialize NEAR Wallet
+  // Initialize NEAR Wallet.
   useEffect(() => {
     (async () => {
       try {
@@ -45,7 +46,7 @@ const App = () => {
     })();
   }, []);
 
-  // Fetch simulation/live mode using the /mode endpoint
+  // Fetch simulation/live mode using the /mode endpoint.
   useEffect(() => {
     const fetchMode = async () => {
       try {
@@ -62,7 +63,7 @@ const App = () => {
     fetchMode();
   }, []);
 
-  // Toggle between simulation and live mode
+  // Toggle between simulation and live mode.
   const toggleSimulationMode = async () => {
     try {
       const newMode = isSimulationMode ? "live" : "simulation";
@@ -72,7 +73,7 @@ const App = () => {
         body: JSON.stringify({ mode: newMode }),
       });
       if (response.ok) {
-        // Update simulation mode state; this triggers re-fetching of coin data
+        // Update simulation mode state (this triggers re-fetching of coin data).
         setIsSimulationMode(!isSimulationMode);
       } else {
         const errorData = await response.json();
@@ -83,12 +84,14 @@ const App = () => {
     }
   };
 
-  // Fetch Crypto Data (re-fetch when walletConnected or simulation mode changes)
+  // Fetch Crypto Data only if logged in.
+  // The effect re-runs when either walletConnected or isSimulationMode changes.
   useEffect(() => {
     if (!walletConnected) return;
 
-    // Use a shorter interval when in simulation mode for more dynamic updates
-    const intervalDuration = isSimulationMode ? SIMULATION_POLLING_INTERVAL : POLLING_INTERVAL;
+    const intervalDuration = isSimulationMode
+      ? SIMULATION_POLLING_INTERVAL
+      : LIVE_POLLING_INTERVAL;
 
     const fetchCryptoData = async () => {
       setLoading(true);
@@ -116,7 +119,7 @@ const App = () => {
     return () => clearInterval(interval);
   }, [walletConnected, isSimulationMode]);
 
-  // Calculate Aggregate USD Value
+  // Calculate Aggregate USD Value whenever cryptoBalances or cryptoPrices changes.
   useEffect(() => {
     const totalUsdValue = Object.entries(cryptoBalances).reduce((sum, [coin, bal]) => {
       const price = cryptoPrices[coin.toLowerCase()] || 0;
@@ -124,6 +127,90 @@ const App = () => {
     }, 0);
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
+
+// Refactored Manual/Auto Transaction Handler
+const handleTransaction = async (
+  type,
+  { coin: transCoin, amount: transAmount, price: transPrice } = {}
+) => {
+  // Use passed coin (from auto trades) if provided; otherwise use state.
+  const usedCoin = transCoin !== undefined ? transCoin : crypto;
+  if (!usedCoin) {
+    alert("Please select a cryptocurrency first.");
+    return;
+  }
+  const coinKey = usedCoin.toLowerCase();
+
+  // Use the passed amount if defined; if not, fallback to state.
+  // Also, default to 1 if state amount is falsy.
+  const transactionAmount =
+    transAmount != null && !isNaN(Number(transAmount)) && Number(transAmount) > 0
+      ? Number(transAmount)
+      : Number(amount) || 1;
+
+  // Use the passed price if defined; otherwise, get it from state.
+  const priceVal =
+    transPrice != null ? transPrice : cryptoPrices[coinKey];
+
+  // Validate amount and price.
+  if (!transactionAmount || isNaN(transactionAmount) || transactionAmount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+  if (!priceVal) {
+    alert("Unable to fetch price. Try again later.");
+    return;
+  }
+
+  const currentBalance = cryptoBalances[coinKey] || 0;
+  if (type === "buy" && transactionAmount * priceVal > balance) {
+    alert("Insufficient NEAR balance to complete the transaction.");
+    return;
+  }
+  if (type === "sell" && transactionAmount > currentBalance) {
+    alert("Insufficient crypto balance to complete the transaction.");
+    return;
+  }
+
+  // Update NEAR balance.
+  const newBalance =
+    type === "buy"
+      ? balance - transactionAmount * priceVal
+      : balance + transactionAmount * priceVal;
+  setBalance(newBalance);
+
+  // Update crypto balance for the coin.
+  setCryptoBalances((prev) => {
+    const prevBal = prev[coinKey] || 0;
+    const updatedBal =
+      type === "buy" ? prevBal + transactionAmount : Math.max(0, prevBal - transactionAmount);
+    return { ...prev, [coinKey]: updatedBal };
+  });
+
+  // Add a new transaction to the history.
+  const newTxn = {
+    type,
+    amount: transactionAmount,
+    date: new Date().toLocaleString(),
+    coin: coinKey,
+    price: priceVal,
+  };
+  setTransactionHistory((prev) => [newTxn, ...prev]);
+
+  // For manual transactions (when no parameter was passed), clear state.
+  if (transCoin === undefined) {
+    setCrypto("");
+    setAmount("");
+  }
+
+  console.log(`Transaction processed: ${type} ${transactionAmount} ${coinKey} @ ${priceVal}`);
+};
+
+// Auto Transaction Helper: call handleTransaction with explicit parameters.
+const autoTransaction = (coin, type, amountToTrade, price) => {
+  console.log(`Auto transaction: ${type} ${amountToTrade} ${coin} @ ${price}`);
+  handleTransaction(type, { coin, amount: amountToTrade, price });
+};
 
   // Toggle Auto-Trading
   const toggleAutoTrading = async (coin) => {
@@ -146,7 +233,7 @@ const App = () => {
     }
   };
 
-  // Poll AI Decisions
+  // Poll AI Decisions for active auto trading coins.
   useEffect(() => {
     const pollAiDecisions = async () => {
       const activeCoins = Object.keys(autoTrading).filter((c) => autoTrading[c]);
@@ -154,7 +241,8 @@ const App = () => {
       for (const coin of activeCoins) {
         try {
           const resp = await fetch(`${API_URL}/trading/decision/${coin}`);
-          if (!resp.ok) throw new Error(`Error fetching AI decision for ${coin}`);
+          if (!resp.ok)
+            throw new Error(`Error fetching AI decision for ${coin}`);
           const decision = await resp.json();
           setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
           if (decision.decision === "BUY") {
@@ -171,66 +259,6 @@ const App = () => {
     const interval = setInterval(pollAiDecisions, AI_DECISION_POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [autoTrading]);
-
-  // Auto Transaction Helper
-  const autoTransaction = (coin, type, amountToTrade, price) => {
-    setCrypto(coin);
-    setAmount(String(amountToTrade));
-    setTimeout(() => handleTransaction(type), 100);
-  };
-
-  // Manual Transaction Handler
-  const handleTransaction = async (type) => {
-    if (!crypto) {
-      alert("Please select a cryptocurrency first.");
-      return;
-    }
-    if (!amount || isNaN(amount) || Number(amount) <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
-    const transactionAmount = Number(amount);
-    const coinKey = crypto.toLowerCase();
-    const price = cryptoPrices[coinKey];
-    const currentBalance = cryptoBalances[coinKey] || 0;
-    if (!price) {
-      alert("Unable to fetch price. Try again later.");
-      return;
-    }
-    if (type === "buy" && transactionAmount * price > balance) {
-      alert("Insufficient NEAR balance to complete the transaction.");
-      return;
-    }
-    if (type === "sell" && transactionAmount > currentBalance) {
-      alert("Insufficient crypto balance to complete the transaction.");
-      return;
-    }
-    const newBalance =
-      type === "buy"
-        ? balance - transactionAmount * price
-        : balance + transactionAmount * price;
-    setBalance(newBalance);
-    setCryptoBalances((prev) => {
-      const prevBal = prev[coinKey] || 0;
-      const updatedBal =
-        type === "buy"
-          ? prevBal + transactionAmount
-          : Math.max(0, prevBal - transactionAmount);
-      return { ...prev, [coinKey]: updatedBal };
-    });
-    setTransactionHistory((prev) => [
-      {
-        type,
-        amount: transactionAmount,
-        date: new Date().toLocaleString(),
-        coin: coinKey,
-        price,
-      },
-      ...prev,
-    ]);
-    setCrypto("");
-    setAmount("");
-  };
 
   const handleSelectCrypto = (selectedCrypto) => setCrypto(selectedCrypto);
 
