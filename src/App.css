@@ -278,3 +278,24 @@ footer {
   background-color: #0f8b0f;
   transform: scale(1.05);
 }
+
+/* New styles for mode toggle button */
+.mode-toggle {
+  margin-top: 20px;
+  padding: 10px;
+  text-align: center;
+  border-radius: 5px;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  background-color: #3498db; /* Default live mode color */
+  transition: background-color 0.3s ease;
+}
+
+.mode-toggle.simulation {
+  background-color: #f39c12; /* Simulation mode color */
+}
+
+.mode-toggle:hover {
+  opacity: 0.9;
+}

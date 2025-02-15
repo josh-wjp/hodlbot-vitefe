@@ -20,6 +20,8 @@ const FrontEndDesign = ({
   cryptoBalances,
   autoTrading,
   toggleAutoTrading,
+  isSimulationMode, // New prop
+  toggleSimulationMode, // New prop
 }) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const isAutoOn = crypto && autoTrading[crypto.toLowerCase()] === true;
@@ -147,6 +149,24 @@ const FrontEndDesign = ({
               ) : (
                 <p>No transaction history available.</p>
               )}
+            </div>
+
+            {/* Simulation Mode Toggle */}
+            <div
+              className={`mode-toggle ${isSimulationMode ? "simulation" : ""}`}
+              onClick={toggleSimulationMode}
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                background: isSimulationMode ? "#f39c12" : "#3498db",
+                color: "#fff",
+                textAlign: "center",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              {isSimulationMode ? "Switch to Live Mode" : "Switch to Simulation Mode"}
             </div>
           </div>
         )}

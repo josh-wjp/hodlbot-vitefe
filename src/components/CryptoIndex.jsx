@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
-import "./CryptoIndex.css"; // Ensure styles are applied
+import "./CryptoIndex.css";
+
+// Define your API URL (ensure it matches your backend)
+const API_BASE_URL = "http://localhost:8000";
 
 const CryptoIndex = ({ onSelectCrypto, tradeDecisions }) => {
   const [visibleCount, setVisibleCount] = useState(10); // Number of coins to display initially
@@ -10,7 +13,8 @@ const CryptoIndex = ({ onSelectCrypto, tradeDecisions }) => {
   useEffect(() => {
     const fetchCryptoList = async () => {
       try {
-        const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100");
+        // Fetch coin data from your backend instead of CoinGecko directly.
+        const response = await fetch(`${API_BASE_URL}/api/coins`);
         if (!response.ok) {
           throw new Error(`API error: ${response.statusText}`);
         }
@@ -39,7 +43,8 @@ const CryptoIndex = ({ onSelectCrypto, tradeDecisions }) => {
       {!loading && !error && (
         <ul>
           {cryptoList.slice(0, visibleCount).map((crypto) => {
-            const tradeDecision = tradeDecisions[crypto.id.toUpperCase()] || "HOLD"; // Default to HOLD
+            // Use the trade_indicator from the backend data (or default to HOLD)
+            const tradeDecision = crypto.trade_indicator?.decision || "HOLD";
 
             let highlightClass = "";
             if (tradeDecision === "BUY") highlightClass = "buy-highlight";
