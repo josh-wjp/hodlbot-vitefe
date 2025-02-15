@@ -5,10 +5,11 @@ import Footer from "./Footer";
 import ErrorDialog from "./ErrorDialog";
 import "./App.css";
 
-// Use the /api base for endpoints that belong to the API
-const API_BASE_URL = "http://localhost:8000";
+// Use a single API base constant for all endpoints
+const API_URL = "http://localhost:8000/api";
 
-const POLLING_INTERVAL = 300000; // 5 minutes
+const POLLING_INTERVAL = 300000; // 5 minutes for live data
+const SIMULATION_POLLING_INTERVAL = 10000; // 10 seconds for simulation mode
 const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
 
 const App = () => {
@@ -44,11 +45,11 @@ const App = () => {
     })();
   }, []);
 
-  // Fetch simulation/live mode using the /api endpoint
+  // Fetch simulation/live mode using the /mode endpoint
   useEffect(() => {
     const fetchMode = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/mode`);
+        const response = await fetch(`${API_URL}/mode`);
         if (response.ok) {
           const data = await response.json();
           setIsSimulationMode(data.mode === "simulation");
@@ -65,13 +66,13 @@ const App = () => {
   const toggleSimulationMode = async () => {
     try {
       const newMode = isSimulationMode ? "live" : "simulation";
-      const response = await fetch(`${API_BASE_URL}/api/mode`, {
+      const response = await fetch(`${API_URL}/mode`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: newMode }),
       });
       if (response.ok) {
-        // This will trigger the re-run of the coin fetching effect below
+        // Update simulation mode state; this triggers re-fetching of coin data
         setIsSimulationMode(!isSimulationMode);
       } else {
         const errorData = await response.json();
@@ -82,16 +83,18 @@ const App = () => {
     }
   };
 
-  // Fetch Crypto Data only if logged in
-  // NOTE: Added isSimulationMode as a dependency so the data refreshes when mode changes.
+  // Fetch Crypto Data (re-fetch when walletConnected or simulation mode changes)
   useEffect(() => {
     if (!walletConnected) return;
+
+    // Use a shorter interval when in simulation mode for more dynamic updates
+    const intervalDuration = isSimulationMode ? SIMULATION_POLLING_INTERVAL : POLLING_INTERVAL;
 
     const fetchCryptoData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/coins`);
+        const response = await fetch(`${API_URL}/coins`);
         if (!response.ok)
           throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
@@ -109,19 +112,16 @@ const App = () => {
     };
 
     fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, POLLING_INTERVAL);
+    const interval = setInterval(fetchCryptoData, intervalDuration);
     return () => clearInterval(interval);
-  }, [walletConnected, isSimulationMode]); // <== Updated here!
+  }, [walletConnected, isSimulationMode]);
 
   // Calculate Aggregate USD Value
   useEffect(() => {
-    const totalUsdValue = Object.entries(cryptoBalances).reduce(
-      (sum, [coin, bal]) => {
-        const price = cryptoPrices[coin.toLowerCase()] || 0;
-        return sum + bal * price;
-      },
-      0
-    );
+    const totalUsdValue = Object.entries(cryptoBalances).reduce((sum, [coin, bal]) => {
+      const price = cryptoPrices[coin.toLowerCase()] || 0;
+      return sum + bal * price;
+    }, 0);
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
@@ -131,18 +131,15 @@ const App = () => {
     setError(null);
     try {
       const endpoint = autoTrading[standardizedCoin]
-        ? `${API_BASE_URL}/api/trading/stop`
-        : `${API_BASE_URL}/api/trading/start`;
+        ? `${API_URL}/trading/stop`
+        : `${API_URL}/trading/start`;
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ coin: standardizedCoin }),
       });
       if (!response.ok) throw new Error("Error toggling auto-trading");
-      setAutoTrading((prev) => ({
-        ...prev,
-        [standardizedCoin]: !prev[standardizedCoin],
-      }));
+      setAutoTrading((prev) => ({ ...prev, [standardizedCoin]: !prev[standardizedCoin] }));
     } catch (err) {
       console.error("Error toggling auto-trading:", err);
       setError(err.message);
@@ -156,11 +153,8 @@ const App = () => {
       if (!activeCoins.length) return;
       for (const coin of activeCoins) {
         try {
-          const resp = await fetch(
-            `${API_BASE_URL}/api/trading/decision/${coin}`
-          );
-          if (!resp.ok)
-            throw new Error(`Error fetching AI decision for ${coin}`);
+          const resp = await fetch(`${API_URL}/trading/decision/${coin}`);
+          if (!resp.ok) throw new Error(`Error fetching AI decision for ${coin}`);
           const decision = await resp.json();
           setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
           if (decision.decision === "BUY") {
@@ -185,7 +179,7 @@ const App = () => {
     setTimeout(() => handleTransaction(type), 100);
   };
 
-  // Manual Buy/Sell
+  // Manual Transaction Handler
   const handleTransaction = async (type) => {
     if (!crypto) {
       alert("Please select a cryptocurrency first.");
