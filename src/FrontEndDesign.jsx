@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import CryptoIndex from "./components/CryptoIndex";
+import "./components/CryptoIndex.css"; // Ensure styles are applied
 
 const FrontEndDesign = ({
   walletConnected,
@@ -18,34 +19,30 @@ const FrontEndDesign = ({
   transactionHistory,
   aggregateUsdValue,
   cryptoBalances,
+  pnl,          // per-coin profit/loss
+  totalPnl,     // total profit/loss
   autoTrading,
   toggleAutoTrading,
-  isSimulationMode, // New prop
-  toggleSimulationMode, // New prop
+  isSimulationMode,
+  toggleSimulationMode,
 }) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const isAutoOn = crypto && autoTrading[crypto.toLowerCase()] === true;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh", // Ensures the full height of the viewport
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* Main Container */}
       <div
         className={`container ${!walletConnected ? "logged-out" : ""}`}
         style={{
-          flex: 1, // Makes the container take up available space
+          flex: 1,
           display: "grid",
-          gridTemplateColumns: walletConnected ? "1fr 1fr" : "1fr", // Adjust columns
+          gridTemplateColumns: walletConnected ? "1fr 1fr" : "1fr",
           gap: "20px",
           padding: "20px",
           marginTop: "10px",
           marginBottom: "110px",
-          overflow: "hidden", // Prevent scrolling
+          overflow: "hidden",
         }}
       >
         <div className="left-column">
@@ -87,7 +84,7 @@ const FrontEndDesign = ({
                   Sell
                 </button>
 
-                {/* Auto Button with Debounce */}
+                {/* Auto Trading Toggle Button */}
                 <button
                   className={`auto-button ${isAutoOn ? "on" : "off"}`}
                   onClick={() => {
@@ -132,6 +129,22 @@ const FrontEndDesign = ({
               )}
             </div>
 
+            <div className="pnl-section">
+              <h3>Profit / Loss</h3>
+              <p>Total PnL: ${totalPnl.toFixed(2)}</p>
+              {pnl && Object.keys(pnl).length > 0 ? (
+                <ul>
+                  {Object.entries(pnl).map(([coin, profit], idx) => (
+                    <li key={idx}>
+                      <strong>{coin.toUpperCase()}:</strong> ${profit.toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No profit/loss data available.</p>
+              )}
+            </div>
+
             <div className="transaction-history">
               <h3>Transaction History</h3>
               {transactionHistory.length > 0 ? (
@@ -139,8 +152,10 @@ const FrontEndDesign = ({
                   {transactionHistory.map((txn, idx) => (
                     <div key={idx}>
                       <p>
-                        <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ $
-                        {txn.price.toFixed(2)}
+                        <strong>{txn.type.toUpperCase()}</strong>: {txn.amount} {txn.coin} @ ${txn.price.toFixed(2)}
+                        {txn.realizedProfit !== 0 ? (
+                          <span> (Profit: {txn.realizedProfit.toFixed(2)})</span>
+                        ) : null}
                       </p>
                       <p>Date: {txn.date}</p>
                     </div>

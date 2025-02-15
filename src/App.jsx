@@ -11,7 +11,7 @@ const API_URL = "http://localhost:8000/api";
 // Define polling intervals (in milliseconds)
 const LIVE_POLLING_INTERVAL = 300000; // 5 minutes (live mode)
 const SIMULATION_POLLING_INTERVAL = 10000; // 10 seconds (simulation mode)
-const AI_DECISION_POLL_INTERVAL = 10000; // 1 second
+const AI_DECISION_POLL_INTERVAL = 1000; // 1 second
 
 const App = () => {
   // Core state declarations.
@@ -124,13 +124,12 @@ const App = () => {
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
-  // Refactored Transaction Handler:
-  // Accepts an optional parameter object for coin, amount, and price.
- const handleTransaction = async (
+// Refactored Manual/Auto Transaction Handler
+const handleTransaction = async (
   type,
   { coin: transCoin, amount: transAmount, price: transPrice } = {}
 ) => {
-  // Use passed coin if available; otherwise, use the state.
+  // Use passed coin if available; otherwise, use state.
   const usedCoin = transCoin !== undefined ? transCoin : crypto;
   if (!usedCoin) {
     alert("Please select a cryptocurrency first.");
@@ -138,15 +137,15 @@ const App = () => {
   }
   const coinKey = usedCoin.toLowerCase();
 
-  // Use passed amount if provided; otherwise, use state. Default to 1.
+  // Use passed amount if defined; otherwise, use state; default to 1.
   const transactionAmount =
     typeof transAmount !== "undefined" && Number(transAmount) > 0
       ? Number(transAmount)
       : Number(amount) || 1;
+  // Use passed price if defined; otherwise, from state.
   const priceVal =
     typeof transPrice !== "undefined" ? transPrice : cryptoPrices[coinKey];
 
-  // Validate transaction amount.
   if (!transactionAmount || isNaN(transactionAmount) || transactionAmount <= 0) {
     alert("Please enter a valid amount.");
     return;
@@ -156,41 +155,42 @@ const App = () => {
     return;
   }
 
-  // For buy orders, ensure the total purchase value is at least $10.
+  // For buy orders: ensure minimum purchase is $10.
   if (type === "buy" && transactionAmount * priceVal < 10) {
     alert("Minimum purchase amount is $10.");
     return;
   }
+  // For buy orders, check NEAR balance.
+  if (type === "buy" && transactionAmount * priceVal > balance) {
+    alert("Insufficient NEAR balance to complete the transaction.");
+    return;
+  }
 
-  // For sell orders, ensure the sale would yield profit.
-  // Check against holdings' average cost.
+  // For sell orders, check that you have sufficient holdings.
   const currentHolding = holdings[coinKey] || { quantity: 0, avgCost: 0 };
   if (type === "sell") {
     if (transactionAmount > currentHolding.quantity) {
       alert("Insufficient coin holdings to complete the transaction.");
       return;
     }
+    // Only sell if current price exceeds average cost (i.e. profit is guaranteed).
     if (priceVal <= currentHolding.avgCost) {
       alert("Sale would not be profitable. Waiting for a better price.");
       return;
     }
   }
 
-  // For buy orders, also check that the purchase doesn't exceed NEAR balance.
-  if (type === "buy" && transactionAmount * priceVal > balance) {
-    alert("Insufficient NEAR balance to complete the transaction.");
-    return;
+  // Process the transaction.
+  let newBalance;
+  if (type === "buy") {
+    newBalance = balance - transactionAmount * priceVal;
+  } else {
+    newBalance = balance + transactionAmount * priceVal;
   }
-
-  // Update NEAR balance.
-  const newBalance =
-    type === "buy"
-      ? balance - transactionAmount * priceVal
-      : balance + transactionAmount * priceVal;
   setBalance(newBalance);
 
   if (type === "buy") {
-    // Update holdings: Calculate new average cost.
+    // Update holdings: Calculate new quantity and average cost.
     const prevQty = currentHolding.quantity;
     const prevAvgCost = currentHolding.avgCost;
     const newQuantity = prevQty + transactionAmount;
@@ -205,7 +205,7 @@ const App = () => {
     // Also update cryptoBalances for display.
     setCryptoBalances((prev) => ({ ...prev, [coinKey]: newQuantity }));
   } else if (type === "sell") {
-    // Calculate realized profit.
+    // Calculate realized profit: (sell price - avgCost) * quantity sold.
     const realizedProfit = (priceVal - currentHolding.avgCost) * transactionAmount;
     const newQuantity = currentHolding.quantity - transactionAmount;
     if (newQuantity > 0) {
@@ -221,14 +221,14 @@ const App = () => {
       });
     }
     setCryptoBalances((prev) => ({ ...prev, [coinKey]: newQuantity }));
-    // Update profit/loss for this coin.
+    // Update pnl for this coin.
     setPnl((prev) => ({
       ...prev,
       [coinKey]: (prev[coinKey] || 0) + realizedProfit,
     }));
   }
 
-  // Create a new transaction history entry.
+  // Create a transaction history entry.
   const newTxn = {
     type,
     amount: transactionAmount,
@@ -239,15 +239,18 @@ const App = () => {
   };
   setTransactionHistory((prev) => [newTxn, ...prev]);
 
-  // Recalculate total PnL.
-  const updatedPnl = { ...pnl };
-  if (type === "sell") {
-    updatedPnl[coinKey] = (pnl[coinKey] || 0) + (priceVal - currentHolding.avgCost) * transactionAmount;
-  }
-  const newTotalPnl = Object.values(updatedPnl).reduce((sum, val) => sum + val, 0);
-  setTotalPnl(newTotalPnl);
+  // Recalculate total PnL (sum of pnl for all coins).
+  setTotalPnl(
+    Object.values({
+      ...pnl,
+      [coinKey]:
+        type === "sell"
+          ? (pnl[coinKey] || 0) + (priceVal - currentHolding.avgCost) * transactionAmount
+          : pnl[coinKey] || 0,
+    }).reduce((sum, val) => sum + val, 0)
+  );
 
-  // For manual transactions (when no parameter was passed), clear input fields.
+  // For manual transactions, clear input fields.
   if (transCoin === undefined) {
     setCrypto("");
     setAmount("");
@@ -256,12 +259,11 @@ const App = () => {
   console.log(`Processed ${type} of ${transactionAmount} ${coinKey} at ${priceVal}`);
 };
 
-
-  // Auto Transaction Helper calls handleTransaction with explicit parameters.
-  const autoTransaction = (coin, type, amountToTrade, price) => {
-    console.log(`Auto transaction: ${type} ${amountToTrade} ${coin} @ ${price}`);
-    handleTransaction(type, { coin, amount: amountToTrade, price });
-  };
+// Auto Transaction Helper: Pass parameters directly.
+const autoTransaction = (coin, type, amountToTrade, price) => {
+  console.log(`Auto transaction: ${type} ${amountToTrade} ${coin} @ ${price}`);
+  handleTransaction(type, { coin, amount: amountToTrade, price });
+};
 
   // Toggle Auto-Trading.
   const toggleAutoTrading = async (coin) => {
@@ -348,6 +350,8 @@ useEffect(() => {
         transactionHistory={transactionHistory}
         aggregateUsdValue={aggregateUsdValue}
         cryptoBalances={cryptoBalances}
+        pnl={pnl}
+        totalPnl={totalPnl}
         autoTrading={autoTrading}
         toggleAutoTrading={toggleAutoTrading}
         isSimulationMode={isSimulationMode}
