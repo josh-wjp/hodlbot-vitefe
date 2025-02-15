@@ -9,9 +9,9 @@ import "./App.css";
 const API_URL = "http://localhost:8000/api";
 
 // Define polling intervals (in milliseconds)
-const LIVE_POLLING_INTERVAL = 300000; // 5 minutes
-const SIMULATION_POLLING_INTERVAL = 10000; // 10 seconds for simulation mode
-const AI_DECISION_POLL_INTERVAL = 30000; // 30 seconds
+const LIVE_POLLING_INTERVAL = 300000; // 5 minutes (live mode)
+const SIMULATION_POLLING_INTERVAL = 10000; // 10 seconds (simulation mode)
+const AI_DECISION_POLL_INTERVAL = 10000; // 1 second
 
 const App = () => {
   // Core state declarations.
@@ -29,6 +29,11 @@ const App = () => {
   const [tradeDecisions, setTradeDecisions] = useState({});
   const [autoTrading, setAutoTrading] = useState({});
   const [isSimulationMode, setIsSimulationMode] = useState(false); // Simulation mode state
+
+  // New state variables for PnL and holdings.
+  const [holdings, setHoldings] = useState({}); // { bitcoin: { quantity: X, avgCost: Y } }
+  const [pnl, setPnl] = useState({}); // { bitcoin: realizedProfit }
+  const [totalPnl, setTotalPnl] = useState(0);
 
   // Initialize NEAR Wallet.
   useEffect(() => {
@@ -59,7 +64,6 @@ const App = () => {
         console.error("Error fetching mode:", err);
       }
     };
-
     fetchMode();
   }, []);
 
@@ -73,7 +77,6 @@ const App = () => {
         body: JSON.stringify({ mode: newMode }),
       });
       if (response.ok) {
-        // Update simulation mode state (this triggers re-fetching of coin data).
         setIsSimulationMode(!isSimulationMode);
       } else {
         const errorData = await response.json();
@@ -84,22 +87,16 @@ const App = () => {
     }
   };
 
-  // Fetch Crypto Data only if logged in.
-  // The effect re-runs when either walletConnected or isSimulationMode changes.
+  // Fetch Crypto Data (re-fetch when walletConnected or simulation mode changes).
   useEffect(() => {
     if (!walletConnected) return;
-
-    const intervalDuration = isSimulationMode
-      ? SIMULATION_POLLING_INTERVAL
-      : LIVE_POLLING_INTERVAL;
-
+    const intervalDuration = isSimulationMode ? SIMULATION_POLLING_INTERVAL : LIVE_POLLING_INTERVAL;
     const fetchCryptoData = async () => {
       setLoading(true);
       setError(null);
       try {
         const response = await fetch(`${API_URL}/coins`);
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         const pricesMap = {};
         data.forEach((coin) => {
@@ -113,13 +110,12 @@ const App = () => {
         setLoading(false);
       }
     };
-
     fetchCryptoData();
     const interval = setInterval(fetchCryptoData, intervalDuration);
     return () => clearInterval(interval);
   }, [walletConnected, isSimulationMode]);
 
-  // Calculate Aggregate USD Value whenever cryptoBalances or cryptoPrices changes.
+  // Calculate Aggregate USD Value.
   useEffect(() => {
     const totalUsdValue = Object.entries(cryptoBalances).reduce((sum, [coin, bal]) => {
       const price = cryptoPrices[coin.toLowerCase()] || 0;
@@ -128,12 +124,13 @@ const App = () => {
     setAggregateUsdValue(totalUsdValue);
   }, [cryptoBalances, cryptoPrices]);
 
-// Refactored Manual/Auto Transaction Handler
-const handleTransaction = async (
+  // Refactored Transaction Handler:
+  // Accepts an optional parameter object for coin, amount, and price.
+ const handleTransaction = async (
   type,
   { coin: transCoin, amount: transAmount, price: transPrice } = {}
 ) => {
-  // Use passed coin (from auto trades) if provided; otherwise use state.
+  // Use passed coin if available; otherwise, use the state.
   const usedCoin = transCoin !== undefined ? transCoin : crypto;
   if (!usedCoin) {
     alert("Please select a cryptocurrency first.");
@@ -141,18 +138,15 @@ const handleTransaction = async (
   }
   const coinKey = usedCoin.toLowerCase();
 
-  // Use the passed amount if defined; if not, fallback to state.
-  // Also, default to 1 if state amount is falsy.
+  // Use passed amount if provided; otherwise, use state. Default to 1.
   const transactionAmount =
-    transAmount != null && !isNaN(Number(transAmount)) && Number(transAmount) > 0
+    typeof transAmount !== "undefined" && Number(transAmount) > 0
       ? Number(transAmount)
       : Number(amount) || 1;
-
-  // Use the passed price if defined; otherwise, get it from state.
   const priceVal =
-    transPrice != null ? transPrice : cryptoPrices[coinKey];
+    typeof transPrice !== "undefined" ? transPrice : cryptoPrices[coinKey];
 
-  // Validate amount and price.
+  // Validate transaction amount.
   if (!transactionAmount || isNaN(transactionAmount) || transactionAmount <= 0) {
     alert("Please enter a valid amount.");
     return;
@@ -162,13 +156,29 @@ const handleTransaction = async (
     return;
   }
 
-  const currentBalance = cryptoBalances[coinKey] || 0;
-  if (type === "buy" && transactionAmount * priceVal > balance) {
-    alert("Insufficient NEAR balance to complete the transaction.");
+  // For buy orders, ensure the total purchase value is at least $10.
+  if (type === "buy" && transactionAmount * priceVal < 10) {
+    alert("Minimum purchase amount is $10.");
     return;
   }
-  if (type === "sell" && transactionAmount > currentBalance) {
-    alert("Insufficient crypto balance to complete the transaction.");
+
+  // For sell orders, ensure the sale would yield profit.
+  // Check against holdings' average cost.
+  const currentHolding = holdings[coinKey] || { quantity: 0, avgCost: 0 };
+  if (type === "sell") {
+    if (transactionAmount > currentHolding.quantity) {
+      alert("Insufficient coin holdings to complete the transaction.");
+      return;
+    }
+    if (priceVal <= currentHolding.avgCost) {
+      alert("Sale would not be profitable. Waiting for a better price.");
+      return;
+    }
+  }
+
+  // For buy orders, also check that the purchase doesn't exceed NEAR balance.
+  if (type === "buy" && transactionAmount * priceVal > balance) {
+    alert("Insufficient NEAR balance to complete the transaction.");
     return;
   }
 
@@ -179,40 +189,81 @@ const handleTransaction = async (
       : balance + transactionAmount * priceVal;
   setBalance(newBalance);
 
-  // Update crypto balance for the coin.
-  setCryptoBalances((prev) => {
-    const prevBal = prev[coinKey] || 0;
-    const updatedBal =
-      type === "buy" ? prevBal + transactionAmount : Math.max(0, prevBal - transactionAmount);
-    return { ...prev, [coinKey]: updatedBal };
-  });
+  if (type === "buy") {
+    // Update holdings: Calculate new average cost.
+    const prevQty = currentHolding.quantity;
+    const prevAvgCost = currentHolding.avgCost;
+    const newQuantity = prevQty + transactionAmount;
+    const newAvgCost =
+      prevQty > 0
+        ? (prevQty * prevAvgCost + transactionAmount * priceVal) / newQuantity
+        : priceVal;
+    setHoldings((prev) => ({
+      ...prev,
+      [coinKey]: { quantity: newQuantity, avgCost: newAvgCost },
+    }));
+    // Also update cryptoBalances for display.
+    setCryptoBalances((prev) => ({ ...prev, [coinKey]: newQuantity }));
+  } else if (type === "sell") {
+    // Calculate realized profit.
+    const realizedProfit = (priceVal - currentHolding.avgCost) * transactionAmount;
+    const newQuantity = currentHolding.quantity - transactionAmount;
+    if (newQuantity > 0) {
+      setHoldings((prev) => ({
+        ...prev,
+        [coinKey]: { quantity: newQuantity, avgCost: currentHolding.avgCost },
+      }));
+    } else {
+      setHoldings((prev) => {
+        const updated = { ...prev };
+        delete updated[coinKey];
+        return updated;
+      });
+    }
+    setCryptoBalances((prev) => ({ ...prev, [coinKey]: newQuantity }));
+    // Update profit/loss for this coin.
+    setPnl((prev) => ({
+      ...prev,
+      [coinKey]: (prev[coinKey] || 0) + realizedProfit,
+    }));
+  }
 
-  // Add a new transaction to the history.
+  // Create a new transaction history entry.
   const newTxn = {
     type,
     amount: transactionAmount,
     date: new Date().toLocaleString(),
     coin: coinKey,
     price: priceVal,
+    realizedProfit: type === "sell" ? (priceVal - currentHolding.avgCost) * transactionAmount : 0,
   };
   setTransactionHistory((prev) => [newTxn, ...prev]);
 
-  // For manual transactions (when no parameter was passed), clear state.
+  // Recalculate total PnL.
+  const updatedPnl = { ...pnl };
+  if (type === "sell") {
+    updatedPnl[coinKey] = (pnl[coinKey] || 0) + (priceVal - currentHolding.avgCost) * transactionAmount;
+  }
+  const newTotalPnl = Object.values(updatedPnl).reduce((sum, val) => sum + val, 0);
+  setTotalPnl(newTotalPnl);
+
+  // For manual transactions (when no parameter was passed), clear input fields.
   if (transCoin === undefined) {
     setCrypto("");
     setAmount("");
   }
 
-  console.log(`Transaction processed: ${type} ${transactionAmount} ${coinKey} @ ${priceVal}`);
+  console.log(`Processed ${type} of ${transactionAmount} ${coinKey} at ${priceVal}`);
 };
 
-// Auto Transaction Helper: call handleTransaction with explicit parameters.
-const autoTransaction = (coin, type, amountToTrade, price) => {
-  console.log(`Auto transaction: ${type} ${amountToTrade} ${coin} @ ${price}`);
-  handleTransaction(type, { coin, amount: amountToTrade, price });
-};
 
-  // Toggle Auto-Trading
+  // Auto Transaction Helper calls handleTransaction with explicit parameters.
+  const autoTransaction = (coin, type, amountToTrade, price) => {
+    console.log(`Auto transaction: ${type} ${amountToTrade} ${coin} @ ${price}`);
+    handleTransaction(type, { coin, amount: amountToTrade, price });
+  };
+
+  // Toggle Auto-Trading.
   const toggleAutoTrading = async (coin) => {
     const standardizedCoin = coin.toLowerCase();
     setError(null);
@@ -234,31 +285,46 @@ const autoTransaction = (coin, type, amountToTrade, price) => {
   };
 
   // Poll AI Decisions for active auto trading coins.
-  useEffect(() => {
-    const pollAiDecisions = async () => {
-      const activeCoins = Object.keys(autoTrading).filter((c) => autoTrading[c]);
-      if (!activeCoins.length) return;
-      for (const coin of activeCoins) {
-        try {
-          const resp = await fetch(`${API_URL}/trading/decision/${coin}`);
-          if (!resp.ok)
-            throw new Error(`Error fetching AI decision for ${coin}`);
-          const decision = await resp.json();
-          setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
-          if (decision.decision === "BUY") {
-            autoTransaction(coin, "buy", 1, decision.price);
-          } else if (decision.decision === "SELL") {
-            autoTransaction(coin, "sell", 1, decision.price);
+useEffect(() => {
+  const pollAiDecisions = async () => {
+    const activeCoins = Object.keys(autoTrading).filter((c) => autoTrading[c]);
+    if (!activeCoins.length) return;
+    for (const coin of activeCoins) {
+      try {
+        const resp = await fetch(`${API_URL}/trading/decision/${coin}`);
+        if (!resp.ok)
+          throw new Error(`Error fetching AI decision for ${coin}`);
+        const decision = await resp.json();
+        setTradeDecisions((prev) => ({ ...prev, [coin]: decision }));
+        if (decision.decision === "BUY") {
+          // Calculate quantity so that at least $10 is spent:
+          const qty = Math.ceil(10 / decision.price);
+          console.log(`Auto BUY for ${coin}: quantity ${qty} @ ${decision.price}`);
+          autoTransaction(coin, "buy", qty, decision.price);
+        } else if (decision.decision === "SELL") {
+          // For SELL: Only sell if holdings exist and the price is at least 5% above the average cost.
+          const coinKey = coin.toLowerCase();
+          const coinHoldings = holdings[coinKey]?.quantity || 0;
+          const avgCost = holdings[coinKey]?.avgCost || 0;
+          const profitThreshold = 0.05; // 5% profit threshold.
+          if (coinHoldings > 0 && decision.price >= avgCost * (1 + profitThreshold)) {
+            // Sell 20% of holdings (minimum 1 coin).
+            const sellPercentage = 0.2;
+            const sellAmount = Math.max(1, Math.floor(coinHoldings * sellPercentage));
+            console.log(`Auto SELL for ${coin}: selling ${sellAmount} units @ ${decision.price}`);
+            autoTransaction(coin, "sell", sellAmount, decision.price);
           }
-        } catch (err) {
-          console.error("AI decision error:", err);
-          setError(err.message);
         }
+      } catch (err) {
+        console.error("AI decision error:", err);
+        setError(err.message);
       }
-    };
-    const interval = setInterval(pollAiDecisions, AI_DECISION_POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [autoTrading]);
+    }
+  };
+  // Include 'holdings' in the dependency so we have the latest values.
+  const interval = setInterval(pollAiDecisions, AI_DECISION_POLL_INTERVAL);
+  return () => clearInterval(interval);
+}, [autoTrading, holdings]);
 
   const handleSelectCrypto = (selectedCrypto) => setCrypto(selectedCrypto);
 
